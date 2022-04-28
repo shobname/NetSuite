@@ -449,6 +449,11 @@ let result=searchResult[k]
 
                 let soId = result.id;
                 let line_id = result.getValue('line');
+                let custom_record_parent_id = result.getValue({
+                    name: "internalid",
+                    join: "CUSTRECORD_NTX_CS_LST_SALESORDER"
+
+                });
 let salesrepEmail=result.getValue({
     name: "email",
     join: "salesRep",
@@ -463,12 +468,9 @@ let salesrepEmail=result.getValue({
                 let to_quan_template = sku_details[from_sku]['to_quan']; //result.getValue('quantity');//sku_details
                 let from_quan_template = sku_details[from_sku]['from_quan'];
                 let to_quan =parseInt(to_quan_template)/parseInt(from_quan_template) * parseInt(from_quan)
-                let custom_record_parent_id = result.getValue({
-                    name: "internalid",
-                    join: "CUSTRECORD_NTX_CS_LST_SALESORDER"
 
-                });
                 log.audit('parent id', custom_record_parent_id);
+
                 if (recent_so == null) recent_so = soId;
                 if (recent_so == soId) {
                     recent_so_details[line_id] = {
