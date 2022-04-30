@@ -135,7 +135,8 @@ let result=searchResult[k]
 
                                 'to': to_sku,
                                 'to_quan': to_quan,
-                                'from_quan': from_quan
+                                'from_quan': from_quan,
+                                'from_sku': from_sku
 
                             }
                         }
@@ -144,7 +145,8 @@ let result=searchResult[k]
                         sku_details[from_sku][_optionKey]={
                             'to': to_sku,
                             'to_quan': to_quan,
-                            'from_quan': from_quan
+                            'from_quan': from_quan,
+                            'from_sku': from_sku
                         }
                     }
 
@@ -156,8 +158,12 @@ let result=searchResult[k]
         const sendEmail = (soId, sku_details) => {
             //store custom record, get id
             //create custom record, get id from here.
+            //check for similar and disc
+            let _type = (sku_details[Object.keys(sku_details)[0]]['_type']);
+            let templateId= _type == XML_TYPE.SIMILAR? EMAIL_TEMPLATE.SIMILAR:EMAIL_TEMPLATE.DISSIMILAR
+            if(_type == XML_TYPE.SIMILAR)
             var EmailMergeResult = render.mergeEmail({
-                templateId: EMAIL_TEMPLATE.SIMILAR,
+                templateId: templateId,
 
                 transactionId: parseInt(soId)
 
@@ -165,7 +171,7 @@ let result=searchResult[k]
 
             var subject = EmailMergeResult.subject;
             var body = EmailMergeResult.body;
-            body = constructBody(body, sku_details);
+            body = constructBody(body, sku_details,_type);
             // throw JSON.stringify(sku_details);
 
             // customer_options(resp_id,sku_details)
@@ -173,6 +179,7 @@ let result=searchResult[k]
             let disti_email = (sku_details[Object.keys(sku_details)[0]]['distributor_email']);
             let cm_email = (sku_details[Object.keys(sku_details)[0]]['cm_email']);
             let unique_key = (sku_details[Object.keys(sku_details)[0]]['uniquenumber']);
+
             let _cc = ['fulfillment@nutanix.com'];
             body = create_rej_link(unique_key, body)
             //throw body;
@@ -219,114 +226,233 @@ let result=searchResult[k]
 
         }
 
+const createChildRecords_for_similar=(soid,recent_so_details,property)=>{
+    var customRecord = record.create({
+        type: 'customrecord_ntx_cs_user_response'
+    });
+    customRecord.setValue({
+        fieldId: 'custrecord_ntx_cs_salesorder',
+        value: soid
+    });
+    customRecord.setValue({
+        fieldId: 'custrecord_ntx_cs_so_line_id',
+        value: recent_so_details[property]['line_id']
+    });
 
+    customRecord.setValue({
+        fieldId: 'custrecord_ntx_cs_option_json',
+        value: {
+            'from_sku': recent_so_details[property]['from_sku'],
+            'to_sku': recent_so_details[property]['to_sku'],
+            'from_quan': recent_so_details[property]['from_quan'],
+            'to_quan': recent_so_details[property]['to_sku']
+        }
+    });
+/*
+    customRecord.setValue({
+        fieldId: 'custrecord_ntx_cs_unique_key',
+        value: uniquenumber
+    });*/
+    customRecord.setValue({
+        fieldId: 'custrecord_ntx_cs_lst_parent_so',
+        value: recent_so_details[property]['custom_record_parent_id']
+    });
+
+    customRecord.save();
+}
+const createChildRecord_Dissimilar =(recent_so_details,property,uniquenumber,i)=>{
+    let sf_order_line_id= recent_so_details[Object.keys(recent_so_details)[0]]['sf_order_line'];
+    let     sf_req_id= recent_so_details[Object.keys(recent_so_details)[0]]['sf_required_line'];
+    let     _model= recent_so_details[Object.keys(recent_so_details)[0]]['model'];
+    log.debug('while',recent_so_details[property]['option' + i]);
+    let _optionDetails = recent_so_details[property]['option' + i];
+
+    let toSKU = _optionDetails['option' + i]['to'];
+    let fromSKU = _optionDetails['option' + i]['from_sku'];
+    let from_quan = _optionDetails['option' + i]['from_quan'];
+    let to_quan = _optionDetails['option' + i]['to_quan'];
+    let ratio = parseInt(to_quan)/parseInt(from_quan);
+
+    var customRecord = record.create({
+        type: 'customrecord_ntx_cs_user_response'
+    });
+    customRecord.setValue({
+        fieldId: 'custrecord_ntx_cs_salesorder',
+        value: soid
+    });
+    customRecord.setValue({
+        fieldId: 'custrecord_ntx_cs_so_line_id',
+        value: recent_so_details[property]['line_id']
+    });
+
+    customRecord.setValue({
+        fieldId: 'custrecord_ntx_cs_option_json',
+        value: {
+            'from_sku': fromSKU,
+            'to_sku': toSKU,
+            'from_quan':from_quan,
+            'to_quan': to_quan,
+            'sf_req_id':sf_req_id,
+            'sf_order_line_id':sf_order_line_id,
+            'model':_model
+        }
+    });
+
+   /* customRecord.setValue({
+        fieldId: 'custrecord_ntx_cs_unique_key',
+        value: uniquenumber
+    });*/
+    customRecord.setValue({
+        fieldId: 'custrecord_ntx_cs_lst_parent_so',
+        value: recent_so_details[property]['custom_record_parent_id']
+    });
+
+    let __id=  customRecord.save();
+    return __id;
+}
         const createWaitForResponse = (soid, recent_so_details) => {
 
 
-throw JSON.stringify(recent_so_details);
+log.debug('json',JSON.stringify(recent_so_details));
+            let __type = (recent_so_details[Object.keys(recent_so_details)[0]]['_type']);
             let uniquenumber = new Date().getTime();
-            for (const property in recent_so_details) {
+            if (__type == 1) {
+                for (const property in recent_so_details) {
+                    createChildRecords_for_similar(soid, recent_so_details, property);
 
 
-                var customRecord = record.create({
-                    type: 'customrecord_ntx_cs_user_response'
+                    recent_so_details[property]['uniquenumber'] = uniquenumber;
+
+                }
+            } else {
+                // createChildRecords_for_dissimilar(soid,recent_so_details,property);
+
+                let property = ([Object.keys(recent_so_details)[0]]);
+
+
+                let i = 1;
+
+                while (recent_so_details[property]['option' + i]) {
+                 let __id=  createChildRecord_Dissimilar(recent_so_details,property,uniquenumber,i);
+log.debug('childid',__id);
+                 let __option=   recent_so_details[property]['option' + i];
+                    __option['option' + i]['childid'] =__id;
+
+                    i++;
+                }
+                recent_so_details[property]['uniquenumber'] = uniquenumber;
+                var dt = format.format({
+                    value: new Date(),
+                    type: format.Type.DATETIME
                 });
-                customRecord.setValue({
-                    fieldId: 'custrecord_ntx_cs_salesorder',
-                    value: soid
-                });
-                customRecord.setValue({
-                    fieldId: 'custrecord_ntx_cs_so_line_id',
-                    value: recent_so_details[property]['line_id']
-                });
-                customRecord.setValue({
-                    fieldId: 'custrecord_ntx_cs_option_json',
-                    value: {
-                        'from_sku': recent_so_details[property]['from_sku'],
-                        'to_sku': recent_so_details[property]['to_sku'],
-                        'from_quan': recent_so_details[property]['from_quan'],
-                        'to_quan': recent_so_details[property]['to_sku']
+                // let __type = (recent_so_details[Object.keys(recent_so_details)[0]]['_type']);
+                let parentid = (recent_so_details[Object.keys(recent_so_details)[0]]['custom_record_parent_id']);
+                record.submitFields({
+                    type: 'customrecord_ntx_cs_user_response_parent',
+                    id: parentid,
+                    values: {
+                        'custrecord_ntx_cs_lst_uniquekey': uniquenumber,
+                        'custrecord_ntx_cs_dt_email_sent_on': dt,
+                        'custrecord_ntx_cs_xml_type': __type
                     }
                 });
-
-                customRecord.setValue({
-                    fieldId: 'custrecord_ntx_cs_unique_key',
-                    value: uniquenumber
-                });
-                customRecord.setValue({
-                    fieldId: 'custrecord_ntx_cs_lst_parent_so',
-                    value: recent_so_details[property]['custom_record_parent_id']
-                });
-
-                customRecord.save();
-                recent_so_details[property]['uniquenumber'] = uniquenumber;
+                return recent_so_details;
 
             }
-
-            var dt = format.format({
-                value: new Date(),
-                type: format.Type.DATETIME
-            });
-            let __type = (recent_so_details[Object.keys(recent_so_details)[0]]['_type']);
-            let parentid = (recent_so_details[Object.keys(recent_so_details)[0]]['custom_record_parent_id']);
-            record.submitFields({
-                type: 'customrecord_ntx_cs_user_response_parent',
-                id: parentid,
-                values: {
-                    'custrecord_ntx_cs_lst_uniquekey': uniquenumber,
-                    'custrecord_ntx_cs_dt_email_sent_on': dt,
-                    'custrecord_ntx_cs_xml_type': __type
-                }
-            });
-            return recent_so_details;
-
         }
+        const constructBody = (body, sku_details,_type) => {
+            if(_type ==1) {
+                var _mainbody = '';
 
-        const constructBody = (body, sku_details) => {
-            var _mainbody = '';
+                _mainbody += '<style>\n' +
+                    '.borderclass {\n' +
+                    '  border: 1px solid black;\n' +
+                    '  border-collapse: collapse;\n' +
+                    '}\n' +
+                    '\n' +
+                    '#t01 {\n' +
+                    '  width: 100%;    \n' +
 
-            _mainbody += '<style>\n' +
-                '.borderclass {\n' +
-                '  border: 1px solid black;\n' +
-                '  border-collapse: collapse;\n' +
-                '}\n' +
-                '\n' +
-                '#t01 {\n' +
-                '  width: 100%;    \n' +
+                    '}\n' +
+                    'th{font-weight: bold;}' +
 
-                '}\n' +
-                'th{font-weight: bold;}' +
+                    '</style>'
+                _mainbody += '<table id="t01" class ="borderclass">\n' +
+                    '  <thead style ="background: #DDDDDD;"><tr class="borderclass">\n' +
+                    //   '    <th class="borderclass">SO NUMBER link</th>\n' +
+                    '    <th class="borderclass">OLD COMPONENT</th>\n' +
+                    '    <th class="borderclass">QUANTITY</th> \n' +
+                    '    <th class="borderclass">NEW COMPONENT</th>\n' +
 
-                '</style>'
-            _mainbody += '<table id="t01" class ="borderclass">\n' +
-                '  <thead style ="background: #DDDDDD;"><tr class="borderclass">\n' +
-                //   '    <th class="borderclass">SO NUMBER link</th>\n' +
-                '    <th class="borderclass">OLD COMPONENT</th>\n' +
-                '    <th class="borderclass">QUANTITY</th> \n' +
-                '    <th class="borderclass">NEW COMPONENT</th>\n' +
+                    '    <th class="borderclass">QUANTITY</th>\n' +
 
-                '    <th class="borderclass">QUANTITY</th>\n' +
+                    '  </tr></thead>\n';
+                for (const property in sku_details) {
 
-                '  </tr></thead>\n';
-            for (const property in sku_details) {
+                    _mainbody +=
+                        '  <tr>\n' +
+                        //    '    <td class="borderclass">' +"test" +'</td>\n' +
+                        '    <td class="borderclass">' + sku_details[property]['from_sku'] + '</td>\n' +
+                        '    <td class="borderclass">' + sku_details[property]['from_quan'] + '</td>\n' +
+                        '    <td class="borderclass">' + sku_details[property]['to_sku'] + '</td>\n' +
+                        '    <td class="borderclass">' + sku_details[property]['to_quan'] + '</td>\n' +
 
-                _mainbody +=
-                    '  <tr>\n' +
-                    //    '    <td class="borderclass">' +"test" +'</td>\n' +
-                    '    <td class="borderclass">' + sku_details[property]['from_sku'] + '</td>\n' +
-                    '    <td class="borderclass">' + sku_details[property]['from_quan'] + '</td>\n' +
-                    '    <td class="borderclass">' + sku_details[property]['to_sku'] + '</td>\n' +
-                    '    <td class="borderclass">' + sku_details[property]['to_quan'] + '</td>\n' +
+                        '  </tr>\n';
 
-                    '  </tr>\n';
+                }
 
+                //loop sku_details, replace ##SIMILAR_TABLE
+                _mainbody += '</table>';
+                //create custom record
+                body = body.replace('##SIMILAR_TABLE##', _mainbody);
+                return body;
             }
+            else{
+                var _mainbody = '';
 
-            //loop sku_details, replace ##SIMILAR_TABLE
-            _mainbody += '</table>';
-            //create custom record
-            body = body.replace('##SIMILAR_TABLE##', _mainbody);
-            return body;
+                _mainbody += '<style>\n' +
+                    '.borderclass {\n' +
+                    '  border: 1px solid black;\n' +
+                    '  border-collapse: collapse;\n' +
+                    '}\n' +
+                    '\n' +
+                    '#t01 {\n' +
+                    '  width: 100%;    \n' +
+
+                    '}\n' +
+                    'th{font-weight: bold;}' +
+
+                    '</style>'
+                _mainbody += '<table id="t01" class ="borderclass">\n' +
+                    '  <thead style ="background: #DDDDDD;"><tr class="borderclass">\n' +
+                    //   '    <th class="borderclass">SO NUMBER link</th>\n' +
+                    '    <th class="borderclass">OLD COMPONENT</th>\n' +
+                    '    <th class="borderclass">QUANTITY</th> \n' +
+                    '    <th class="borderclass">NEW COMPONENT</th>\n' +
+
+                    '    <th class="borderclass">QUANTITY</th>\n' +
+
+                    '  </tr></thead>\n';
+                for (const property in sku_details) {
+
+                    _mainbody +=
+                        '  <tr>\n' +
+                        //    '    <td class="borderclass">' +"test" +'</td>\n' +
+                        '    <td class="borderclass">' + sku_details[property]['from_sku'] + '</td>\n' +
+                        '    <td class="borderclass">' + sku_details[property]['from_quan'] + '</td>\n' +
+                        '    <td class="borderclass">' + sku_details[property]['to_sku'] + '</td>\n' +
+                        '    <td class="borderclass">' + sku_details[property]['to_quan'] + '</td>\n' +
+
+                        '  </tr>\n';
+
+                }
+
+                //loop sku_details, replace ##SIMILAR_TABLE
+                _mainbody += '</table>';
+                //create custom record
+                body = body.replace('##SIMILAR_TABLE##', _mainbody);
+                return body;
+            }
         }
 
 
@@ -361,6 +487,8 @@ throw JSON.stringify(recent_so_details);
 
                 let soId = result.id;
                 let line_id = result.getValue('line');
+                let sf_order_line = result.getValue('custcol_sf_order_line_id');
+                let sf_required_line = result.getValue('custcol_sf_order_required_by_line');
                 let custom_record_parent_id = result.getValue({
                     name: "internalid",
                     join: "CUSTRECORD_NTX_CS_LST_SALESORDER"
@@ -368,7 +496,7 @@ throw JSON.stringify(recent_so_details);
                 });
 let salesrepEmail=result.getValue({
     name: "email",
-    join: "salesRep",
+    join: "custbody14",
     label: "Email"
 });
                 let from_quan = result.getValue('quantity');
@@ -412,6 +540,8 @@ let salesrepEmail=result.getValue({
                             'line_id': line_id,
                             "soId": soId,
                             "model":model,
+                            "sf_order_line":sf_order_line,
+                            "sf_required_line":sf_required_line,
                             "salesrep_email":salesrepEmail
                         }
                         recent_so_details=  setOptions(line_id,recent_so_details,sku_details[from_sku]);
@@ -421,7 +551,7 @@ let salesrepEmail=result.getValue({
                     if (searchResultCount == (i + 1)) {//send for last record, and if only salesorder
                         log.debug('sending email');
                         recent_so_details = createWaitForResponse(soId, recent_so_details, custom_record_parent_id);
-
+log.debug('js',JSON.stringify(recent_so_details));
 
                         sendEmail(soId, recent_so_details);
                     }
@@ -458,6 +588,8 @@ let salesrepEmail=result.getValue({
                             'line_id': line_id,
                             "soId": soId,
                             "model":model,
+                            "sf_order_line":sf_order_line,
+                            "sf_required_line":sf_required_line,
                             "salesrep_email":salesrepEmail
                         }
                         recent_so_details=  setOptions(line_id,recent_so_details,sku_details[from_sku]);
@@ -523,7 +655,7 @@ return recent_so_details;
                         label: "Line ID"
                     }),
                     search.createColumn({
-                        name: "custcol_sf_order_required_by_line",
+                        name: "custcol_sf_order_required_by_line",//
                         label: "SF Required By Order Line"
                     }),
                     search.createColumn({
@@ -582,86 +714,3 @@ return recent_so_details;
 
     });
 
-
-/*require(['N/xml'],
-    function(xml){
-        function process(){
-
-            var xmlString = "<SWAPXML><FROM><FROMXML><FROMSKU>C-NIC-25GSFP2-A</FROMSKU><FROMQuantity>1</FROMQuantity></FROMXML></FROM><TO><TOXML><TOSKU>C-NIC-25G2A1</TOSKU><TOQUANTITY>1</TOQUANTITY></TOXML></TO></SWAPXML>";
-
-            var xmlDocument = xml.Parser.fromString({
-                text: xmlString
-            });
-            var fromNode = xml.XPath.select({
-                node: xmlDocument,
-                xpath: '//FROMXML'
-            });
-
-            var toNode = xml.XPath.select({
-                node: xmlDocument,
-                xpath: '//TOXML'
-            });
-
-            var test = xml.XPath.select({
-                node: xmlDocument,
-                xpath: '//SWAPXML'
-            });
-
-            for (var i = 0; i < test.length; i++) {
-                log.debug('Config content', test[i].textContent);
-                var from_sku = xml.XPath.select({
-                    node: xmlDocument,
-                    xpath: '//FROMSKU'
-                })[i].textContent;
-                var from_quan = xml.XPath.select({
-                    node: xmlDocument,
-                    xpath: '//FROMQuantity'
-                })[i].textContent;
-                var to_sku = xml.XPath.select({
-                    node: xmlDocument,
-                    xpath: '//TOSKU'
-                })[i].textContent;
-
-                var to_quan = xml.XPath.select({
-                    node: xmlDocument,
-                    xpath: '//TOQUANTITY'
-                })[i].textContent;
-
-                var f=0;
-            }
-
-            for (var i = 0; i < fromNode.length; i++) {
-                log.debug('Config content', fromNode[i].textContent);
-                var from_sku = xml.XPath.select({
-                    node: xmlDocument,
-                    xpath: '//FROMSKU'
-                })[i].textContent;
-                var from_quan = xml.XPath.select({
-                    node: xmlDocument,
-                    xpath: '//FROMQuantity'
-                })[i].textContent;
-
-
-                var f=0;
-            }
-            for (var i = 0; i < toNode.length; i++) {
-                log.debug('Config content', toNode[i].textContent);
-
-
-                var to_sku = xml.XPath.select({
-                    node: xmlDocument,
-                    xpath: '//TOSKU'
-                })[i].textContent;
-
-                var to_quan = xml.XPath.select({
-                    node: xmlDocument,
-                    xpath: '//TOQUANTITY'
-                })[i].textContent;
-                var f=0;
-            }
-
-
-            var gg=0
-        }
-        process();
-    });*/
