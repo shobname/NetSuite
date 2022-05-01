@@ -8,9 +8,9 @@
 * 1. both similar and dissimilar wontbe in same order
 * 2.unique so with ready status , email sent in custom record.
 * */
-define(['N/xml', 'N/search', 'N/render', 'N/email', 'N/record', 'N/format', 'N/runtime', 'N/url'],
+define(['N/xml', 'N/search', 'N/render', 'N/email', 'N/record', 'N/format', 'N/runtime', 'N/url','SuiteScripts/NTX/NTX_Lib_Swap.js'],
 
-    (xml, search, render, email, record, format, runtime, url) => {
+    (xml, search, render, email, record, format, runtime, url,libCS) => {
         let SENDER = 3145069;
         let sku_details = {};
         let arr_from_sku = [];
@@ -251,6 +251,10 @@ const createChildRecords_for_similar=(soid,recent_so_details,property)=>{
         fieldId: 'custrecord_ntx_cs_so_line_id',
         value: recent_so_details[property]['line_id']
     });
+    customRecord.setValue({
+        fieldId: 'custrecord_ntx_cs_from_sku',
+        value: recent_so_details[property]['from_sku']
+    });
 
     customRecord.setValue({
         fieldId: 'custrecord_ntx_cs_option_json',
@@ -296,6 +300,15 @@ const createChildRecord_Dissimilar =(soid,recent_so_details,property,uniquenumbe
     customRecord.setValue({
         fieldId: 'custrecord_ntx_cs_so_line_id',
         value: recent_so_details[property]['line_id']
+    });
+
+    customRecord.setValue({
+        fieldId: 'custrecord_ntx_cs_from_sku',
+        value:fromSKU
+    });
+    customRecord.setValue({
+        fieldId: 'custrecord_ntx_cs_model_name',
+        value: _model
     });
 
     customRecord.setValue({
@@ -377,7 +390,7 @@ log.debug('childid',__id);
             if(_type ==1) {
                 var _mainbody = '';
 
-               _mainbody = constructTable(_mainbody);
+               _mainbody = libCS.constructTable(_mainbody);
                 for (const property in sku_details) {
 
                     _mainbody +=
@@ -415,7 +428,7 @@ log.debug('childid',__id);
                         let to_quan_template=_optionDetails['option' + i]['to_quan'];
                         let _to_quan = parseInt(to_quan_template)/parseInt(from_quan_template) * parseInt(so_from_quan)
                         _mainbody +='<h3>Option ' +i+'</h3>';
-                    _mainbody = constructTable(_mainbody);
+                    _mainbody = libCS.constructTable(_mainbody);
                         _mainbody +=
                             '  <tr>\n' +
 
@@ -457,32 +470,7 @@ log.debug('childid',__id);
             }
         }
 
-const constructTable=(_mainbody)=>{
-    _mainbody += '<style>\n' +
-        '.borderclass {\n' +
-        '  border: 1px solid black;\n' +
-        '  border-collapse: collapse;\n' +
-        '}\n' +
-        '\n' +
-        '#t01 {\n' +
-        '  width: 100%;    \n' +
 
-        '}\n' +
-        'th{font-weight: bold;}' +
-
-        '</style>'
-    _mainbody += '<table id="t01" class ="borderclass">\n' +
-        '  <thead style ="background: #DDDDDD;"><tr class="borderclass">\n' +
-
-        '    <th class="borderclass">OLD COMPONENT</th>\n' +
-        '    <th class="borderclass">QUANTITY</th> \n' +
-        '    <th class="borderclass">NEW COMPONENT</th>\n' +
-
-        '    <th class="borderclass">QUANTITY</th>\n' +
-
-        '  </tr></thead>\n';
-    return _mainbody;
-}
         const getSalesOrders_sendEmails = (arr_from_sku) => {
             let fil = getFilters(arr_from_sku);
             var currScript = runtime.getCurrentScript();
