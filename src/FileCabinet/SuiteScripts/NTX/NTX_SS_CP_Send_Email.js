@@ -4,6 +4,10 @@
  */
 /*1.0       shobiya     april 21 2022       /BA-89159 component swap
  * */
+/*
+* 1. both similar and dissimilar wontbe in same order
+* 2.unique so with ready status , email sent in custom record.
+* */
 define(['N/xml', 'N/search', 'N/render', 'N/email', 'N/record', 'N/format', 'N/runtime', 'N/url'],
 
     (xml, search, render, email, record, format, runtime, url) => {
@@ -161,7 +165,7 @@ let result=searchResult[k]
             //check for similar and disc
             let _type = (sku_details[Object.keys(sku_details)[0]]['_type']);
             let templateId= _type == XML_TYPE.SIMILAR? EMAIL_TEMPLATE.SIMILAR:EMAIL_TEMPLATE.DISSIMILAR
-            if(_type == XML_TYPE.SIMILAR)
+
             var EmailMergeResult = render.mergeEmail({
                 templateId: templateId,
 
@@ -176,21 +180,30 @@ let result=searchResult[k]
 
             // customer_options(resp_id,sku_details)
             //body=
-            let disti_email = (sku_details[Object.keys(sku_details)[0]]['distributor_email']);
-            let cm_email = (sku_details[Object.keys(sku_details)[0]]['cm_email']);
-            let unique_key = (sku_details[Object.keys(sku_details)[0]]['uniquenumber']);
+            let to_email ='';
+            let _cc=[];
+            if(_type ==1){
+                let disti_email = (sku_details[Object.keys(sku_details)[0]]['distributor_email']);
+                let cm_email = (sku_details[Object.keys(sku_details)[0]]['cm_email']);
+                let unique_key = (sku_details[Object.keys(sku_details)[0]]['uniquenumber']);
 
-            let _cc = ['fulfillment@nutanix.com'];
-            body = create_rej_link(unique_key, body)
-            //throw body;
-            if (cm_email) _cc.push(cm_email);
-            log.debug('cc', _cc.toString());
-            if (!disti_email) disti_email = cm_email;
-            if (disti_email) {
+               _cc= _cc.push['fulfillment@nutanix.com'];
+                body = create_rej_link(unique_key, body)
+                //throw body;
+                if (cm_email) _cc.push(cm_email);
+                log.debug('cc', _cc.toString());
+                if (!disti_email) disti_email = cm_email;
+                to_email=disti_email;
+            }
+else{
+               to_email = (sku_details[Object.keys(sku_details)[0]]['salesrep_email']);
+            }
+
+            if (to_email) {
 
                 email.send({
                     author: SENDER,
-                    recipients: disti_email,
+                    recipients: to_email,
                     cc: _cc,
                     subject: subject,
                     body: body,
@@ -241,15 +254,15 @@ const createChildRecords_for_similar=(soid,recent_so_details,property)=>{
 
     customRecord.setValue({
         fieldId: 'custrecord_ntx_cs_option_json',
-        value: {
+        value: JSON.stringify({
             'from_sku': recent_so_details[property]['from_sku'],
             'to_sku': recent_so_details[property]['to_sku'],
             'from_quan': recent_so_details[property]['from_quan'],
             'to_quan': recent_so_details[property]['to_sku']
-        }
+        })
     });
-/*
-    customRecord.setValue({
+
+  /*  customRecord.setValue({
         fieldId: 'custrecord_ntx_cs_unique_key',
         value: uniquenumber
     });*/
@@ -260,7 +273,7 @@ const createChildRecords_for_similar=(soid,recent_so_details,property)=>{
 
     customRecord.save();
 }
-const createChildRecord_Dissimilar =(recent_so_details,property,uniquenumber,i)=>{
+const createChildRecord_Dissimilar =(soid,recent_so_details,property,uniquenumber,i)=>{
     let sf_order_line_id= recent_so_details[Object.keys(recent_so_details)[0]]['sf_order_line'];
     let     sf_req_id= recent_so_details[Object.keys(recent_so_details)[0]]['sf_required_line'];
     let     _model= recent_so_details[Object.keys(recent_so_details)[0]]['model'];
@@ -287,7 +300,7 @@ const createChildRecord_Dissimilar =(recent_so_details,property,uniquenumber,i)=
 
     customRecord.setValue({
         fieldId: 'custrecord_ntx_cs_option_json',
-        value: {
+        value: JSON.stringify({
             'from_sku': fromSKU,
             'to_sku': toSKU,
             'from_quan':from_quan,
@@ -295,10 +308,10 @@ const createChildRecord_Dissimilar =(recent_so_details,property,uniquenumber,i)=
             'sf_req_id':sf_req_id,
             'sf_order_line_id':sf_order_line_id,
             'model':_model
-        }
+        })
     });
 
-   /* customRecord.setValue({
+  /*  customRecord.setValue({
         fieldId: 'custrecord_ntx_cs_unique_key',
         value: uniquenumber
     });*/
@@ -325,15 +338,13 @@ log.debug('json',JSON.stringify(recent_so_details));
 
                 }
             } else {
-                // createChildRecords_for_dissimilar(soid,recent_so_details,property);
-
                 let property = ([Object.keys(recent_so_details)[0]]);
 
 
                 let i = 1;
 
                 while (recent_so_details[property]['option' + i]) {
-                 let __id=  createChildRecord_Dissimilar(recent_so_details,property,uniquenumber,i);
+                 let __id=  createChildRecord_Dissimilar(soid,recent_so_details,property,uniquenumber,i);
 log.debug('childid',__id);
                  let __option=   recent_so_details[property]['option' + i];
                     __option['option' + i]['childid'] =__id;
@@ -341,57 +352,37 @@ log.debug('childid',__id);
                     i++;
                 }
                 recent_so_details[property]['uniquenumber'] = uniquenumber;
-                var dt = format.format({
-                    value: new Date(),
-                    type: format.Type.DATETIME
-                });
-                // let __type = (recent_so_details[Object.keys(recent_so_details)[0]]['_type']);
-                let parentid = (recent_so_details[Object.keys(recent_so_details)[0]]['custom_record_parent_id']);
-                record.submitFields({
-                    type: 'customrecord_ntx_cs_user_response_parent',
-                    id: parentid,
-                    values: {
-                        'custrecord_ntx_cs_lst_uniquekey': uniquenumber,
-                        'custrecord_ntx_cs_dt_email_sent_on': dt,
-                        'custrecord_ntx_cs_xml_type': __type
-                    }
-                });
-                return recent_so_details;
+
 
             }
+            var dt = format.format({
+                value: new Date(),
+                type: format.Type.DATETIME
+            });
+            // let __type = (recent_so_details[Object.keys(recent_so_details)[0]]['_type']);
+            let parentid = (recent_so_details[Object.keys(recent_so_details)[0]]['custom_record_parent_id']);
+            record.submitFields({
+                type: 'customrecord_ntx_cs_user_response_parent',
+                id: parentid,
+                values: {
+                    'custrecord_ntx_cs_lst_uniquekey': uniquenumber,
+                    'custrecord_ntx_cs_dt_email_sent_on': dt,
+                    'custrecord_ntx_cs_xml_type': __type,
+                    'custrecord_ntx_cs_lst_current_status':2
+                }
+            });
+            return recent_so_details;
         }
         const constructBody = (body, sku_details,_type) => {
             if(_type ==1) {
                 var _mainbody = '';
 
-                _mainbody += '<style>\n' +
-                    '.borderclass {\n' +
-                    '  border: 1px solid black;\n' +
-                    '  border-collapse: collapse;\n' +
-                    '}\n' +
-                    '\n' +
-                    '#t01 {\n' +
-                    '  width: 100%;    \n' +
-
-                    '}\n' +
-                    'th{font-weight: bold;}' +
-
-                    '</style>'
-                _mainbody += '<table id="t01" class ="borderclass">\n' +
-                    '  <thead style ="background: #DDDDDD;"><tr class="borderclass">\n' +
-                    //   '    <th class="borderclass">SO NUMBER link</th>\n' +
-                    '    <th class="borderclass">OLD COMPONENT</th>\n' +
-                    '    <th class="borderclass">QUANTITY</th> \n' +
-                    '    <th class="borderclass">NEW COMPONENT</th>\n' +
-
-                    '    <th class="borderclass">QUANTITY</th>\n' +
-
-                    '  </tr></thead>\n';
+               _mainbody = constructTable(_mainbody);
                 for (const property in sku_details) {
 
                     _mainbody +=
                         '  <tr>\n' +
-                        //    '    <td class="borderclass">' +"test" +'</td>\n' +
+
                         '    <td class="borderclass">' + sku_details[property]['from_sku'] + '</td>\n' +
                         '    <td class="borderclass">' + sku_details[property]['from_quan'] + '</td>\n' +
                         '    <td class="borderclass">' + sku_details[property]['to_sku'] + '</td>\n' +
@@ -409,53 +400,89 @@ log.debug('childid',__id);
             }
             else{
                 var _mainbody = '';
-
-                _mainbody += '<style>\n' +
-                    '.borderclass {\n' +
-                    '  border: 1px solid black;\n' +
-                    '  border-collapse: collapse;\n' +
-                    '}\n' +
-                    '\n' +
-                    '#t01 {\n' +
-                    '  width: 100%;    \n' +
-
-                    '}\n' +
-                    'th{font-weight: bold;}' +
-
-                    '</style>'
-                _mainbody += '<table id="t01" class ="borderclass">\n' +
-                    '  <thead style ="background: #DDDDDD;"><tr class="borderclass">\n' +
-                    //   '    <th class="borderclass">SO NUMBER link</th>\n' +
-                    '    <th class="borderclass">OLD COMPONENT</th>\n' +
-                    '    <th class="borderclass">QUANTITY</th> \n' +
-                    '    <th class="borderclass">NEW COMPONENT</th>\n' +
-
-                    '    <th class="borderclass">QUANTITY</th>\n' +
-
-                    '  </tr></thead>\n';
                 for (const property in sku_details) {
+                    let i = 1;
 
-                    _mainbody +=
-                        '  <tr>\n' +
-                        //    '    <td class="borderclass">' +"test" +'</td>\n' +
-                        '    <td class="borderclass">' + sku_details[property]['from_sku'] + '</td>\n' +
-                        '    <td class="borderclass">' + sku_details[property]['from_quan'] + '</td>\n' +
-                        '    <td class="borderclass">' + sku_details[property]['to_sku'] + '</td>\n' +
-                        '    <td class="borderclass">' + sku_details[property]['to_quan'] + '</td>\n' +
 
-                        '  </tr>\n';
+
+                    let property = ([Object.keys(sku_details)[0]]);
+
+                    while (sku_details[property]['option' + i]) {
+                        let _optionDetails = sku_details[property]['option' + i];
+
+                        let so_from_quan =_optionDetails['option' + i]['so_from_quan'];
+                        let from_quan_template=_optionDetails['option' + i]['from_quan'];
+                        let to_quan_template=_optionDetails['option' + i]['to_quan'];
+                        let _to_quan = parseInt(to_quan_template)/parseInt(from_quan_template) * parseInt(so_from_quan)
+                        _mainbody +='<h3>Option ' +i+'</h3>';
+                    _mainbody = constructTable(_mainbody);
+                        _mainbody +=
+                            '  <tr>\n' +
+
+                            '    <td class="borderclass">' + _optionDetails['option' + i]['from_sku'] + '</td>\n' +
+                            '    <td class="borderclass">' +so_from_quan + '</td>\n' +
+                            '    <td class="borderclass">' + _to_quan + '</td>\n' +
+                            '    <td class="borderclass">' +  _optionDetails['option' + i]['to'] + '</td>\n' +
+
+                            '  </tr>\n';
+
+                        _mainbody += '</table><br>';
+                        i++;
+
+                    }
+
 
                 }
-
+//replace suitlet link
                 //loop sku_details, replace ##SIMILAR_TABLE
-                _mainbody += '</table>';
+
                 //create custom record
-                body = body.replace('##SIMILAR_TABLE##', _mainbody);
+
+                let unique_key = (sku_details[Object.keys(sku_details)[0]]['uniquenumber']);
+
+                let suiteletURLOutput = url.resolveScript({
+                    scriptId: 'customscript_ntx_sl_dissimilar_response',
+                    deploymentId: 'customdeploy_ntx_sl_dissimilar_response',
+                    returnExternalUrl: true,
+                    params: {
+
+                        unique_key: unique_key
+
+                    }
+                });
+
+                body = body.replace('##popup_link##', suiteletURLOutput);
+                body = body.replace('##DISSIMILAR_TABLE##', _mainbody);
                 return body;
             }
         }
 
+const constructTable=(_mainbody)=>{
+    _mainbody += '<style>\n' +
+        '.borderclass {\n' +
+        '  border: 1px solid black;\n' +
+        '  border-collapse: collapse;\n' +
+        '}\n' +
+        '\n' +
+        '#t01 {\n' +
+        '  width: 100%;    \n' +
 
+        '}\n' +
+        'th{font-weight: bold;}' +
+
+        '</style>'
+    _mainbody += '<table id="t01" class ="borderclass">\n' +
+        '  <thead style ="background: #DDDDDD;"><tr class="borderclass">\n' +
+
+        '    <th class="borderclass">OLD COMPONENT</th>\n' +
+        '    <th class="borderclass">QUANTITY</th> \n' +
+        '    <th class="borderclass">NEW COMPONENT</th>\n' +
+
+        '    <th class="borderclass">QUANTITY</th>\n' +
+
+        '  </tr></thead>\n';
+    return _mainbody;
+}
         const getSalesOrders_sendEmails = (arr_from_sku) => {
             let fil = getFilters(arr_from_sku);
             var currScript = runtime.getCurrentScript();
@@ -496,9 +523,9 @@ log.debug('childid',__id);
                 });
 let salesrepEmail=result.getValue({
     name: "email",
-    join: "custbody14",
-    label: "Email"
+    join: "custbody14"
 });
+log.debug('salesrepema',salesrepEmail);
                 let from_quan = result.getValue('quantity');
 
 
@@ -544,7 +571,7 @@ let salesrepEmail=result.getValue({
                             "sf_required_line":sf_required_line,
                             "salesrep_email":salesrepEmail
                         }
-                        recent_so_details=  setOptions(line_id,recent_so_details,sku_details[from_sku]);
+                        recent_so_details=  setOptions(line_id,recent_so_details,sku_details[from_sku],from_quan);
 
                     }
                   //  log.debug('storing records')
@@ -592,7 +619,7 @@ log.debug('js',JSON.stringify(recent_so_details));
                             "sf_required_line":sf_required_line,
                             "salesrep_email":salesrepEmail
                         }
-                        recent_so_details=  setOptions(line_id,recent_so_details,sku_details[from_sku]);
+                        recent_so_details=  setOptions(line_id,recent_so_details,sku_details[from_sku],from_quan);
 
                     }
 
@@ -605,12 +632,15 @@ log.debug('js',JSON.stringify(recent_so_details));
             }
         }
         }
-        const setOptions=(line_id,recent_so_details,sku_details)=>{
+        const setOptions=(line_id,recent_so_details,sku_details,from_quan)=>{
             let i=1;
             while (sku_details['option'+i]) {
                 recent_so_details[line_id]['option'+i]={
                     ['option'+i]: sku_details['option'+i]
                 }
+
+                let __option=   recent_so_details[line_id]['option' + i];
+                __option['option' + i]['so_from_quan'] =from_quan;
                 i++;
             }
 return recent_so_details;
@@ -685,7 +715,7 @@ return recent_so_details;
 
                     search.createColumn({
                         name: "email",
-                        join: "salesRep",
+                        join: "CUSTBODY14",
                         label: "Email"
                     }),
                     search.createColumn({
