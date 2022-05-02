@@ -211,6 +211,7 @@ x=0;
                     label: 'Submit response',
                     id: "custpage_updateconfig_button"
                 });
+              //  form.clientScriptFileId = 'NTX_Client_SL_Validation.js';
                 context.response.writePage(form);
 
             }
@@ -257,7 +258,7 @@ log.debug(selected_id);
                 });
 
               //  var __row = req.parameters.custpage_sublist_add_milestone4data;
-                context.response.writePage('Thankyou, your response is stored');
+                context.response.writePage('Thankyou, your response is stored in NetSuite');
 
 
 
