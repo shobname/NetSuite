@@ -134,7 +134,7 @@ log.debug('all sku',all_from_sku.indexOf(from_sku));
                             type: ui.FieldType.TEXT,
                             label: 'child internalid'
                         }).updateDisplayType({
-                            displayType: ui.FieldDisplayType.NORMAL
+                            displayType: ui.FieldDisplayType.HIDDEN
                         });
                         sublist.addField({
                             id: 'custpage_parent_internalid'+num,
@@ -211,7 +211,7 @@ x=0;
                     label: 'Submit response',
                     id: "custpage_updateconfig_button"
                 });
-              //  form.clientScriptFileId = 'NTX_Client_SL_Validation.js';
+                form.clientScriptFileId = 18125554;
                 context.response.writePage(form);
 
             }

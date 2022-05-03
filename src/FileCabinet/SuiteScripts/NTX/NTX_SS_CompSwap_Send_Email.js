@@ -23,8 +23,7 @@ define(['N/xml', 'N/search', 'N/render', 'N/email', 'N/record', 'N/format', 'N/r
             DISSIMILAR: 4589
         }
         const getProperty =  (propertyName,obj)=> {
-           // log.debug('obj.hasOwnProperty(propertyName)',obj.hasOwnProperty(propertyName));
-            //log.debug('propertyName',propertyName);
+
          if(!obj.hasOwnProperty(propertyName)){
              return null;
          }
@@ -38,8 +37,8 @@ define(['N/xml', 'N/search', 'N/render', 'N/email', 'N/record', 'N/format', 'N/r
             var customrecord_ntx_cs_swap_datatableSearchObj = search.create({
                 type: "customrecord_ntx_cs_swap_datatable",
                 filters: [
-                    ["isinactive", "is", "F"], 'AND',
-                    ["custrecord_ntx_cs_type", "is", XML_TYPE.DISSIMILAR]
+                    ["isinactive", "is", "F"]//, 'AND',
+                   // ["custrecord_ntx_cs_type", "is", XML_TYPE.DISSIMILAR]
                 ],
                 columns: [
                     search.createColumn({
@@ -434,8 +433,8 @@ log.debug('childid',__id);
 
                             '    <td class="borderclass">' + _optionDetails['option' + i]['from_sku'] + '</td>\n' +
                             '    <td class="borderclass">' +so_from_quan + '</td>\n' +
-                            '    <td class="borderclass">' + _to_quan + '</td>\n' +
-                            '    <td class="borderclass">' +  _optionDetails['option' + i]['to'] + '</td>\n' +
+                            '    <td class="borderclass">' + _optionDetails['option' + i]['to'] + '</td>\n' +
+                            '    <td class="borderclass">' + _to_quan  + '</td>\n' +
 
                             '  </tr>\n';
 
@@ -628,7 +627,7 @@ log.debug('js',JSON.stringify(recent_so_details));
                 }
 
                 let __option=   recent_so_details[line_id]['option' + i];
-                __option['option' + i]['so_from_quan'] =from_quan;
+                __option['option' + i]['so_from_quan'] =from_quan;//but not storing it, used only for calc
                 i++;
             }
 return recent_so_details;
