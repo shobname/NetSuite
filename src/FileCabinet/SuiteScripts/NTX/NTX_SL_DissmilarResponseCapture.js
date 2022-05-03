@@ -12,7 +12,9 @@ define(['SuiteScripts/NTX/NTX_Lib_Swap.js','N/search','N/record','N/ui/serverWid
                 type: "customrecord_ntx_cs_user_response_parent",
                 filters:
                     [
-                        ["custrecord_ntx_cs_lst_uniquekey","equalto",unique_key]
+                        ["custrecord_ntx_cs_lst_uniquekey","equalto",unique_key],
+                        'and',
+                        ["isinactive","is",'F']
                     ],
                 columns:
                     [
@@ -70,22 +72,26 @@ let all_from_sku=[];
                 let num='';
                 var sublist ='';
                 let x=0;
-                var action1 = form.addField({
+                var approve = form.addField({
                     id: 'custpage_response',
                     label: 'Approve',
                     type: 'RADIO',
                     source: "new1",
+                    name:'approve'
                  //   container: "custpage_filtergroup"
                 });
-                var action1 = form.addField({
+                approve.defaultValue = 'approve';
+
+                var reject = form.addField({
                     id: 'custpage_response',
                     label: 'Reject',
                     type: 'RADIO',
                     source: "new",
+                    name:'reject'
                   //  container: "custpage_filtergroup"
                 });
 
-
+              //  action1.defaultValue ='F';
                 customrecord_ntx_cs_user_response_parentSearchObj.run().each(function(result) {
 
 
@@ -207,10 +213,15 @@ x=0;
 
 //i++;
 
-                form.addSubmitButton({
-                    label: 'Submit response',
-                    id: "custpage_updateconfig_button"
+               /* form.addButton({
+                    label: 'Approve',
+                    id: "custpage_btn_approve",
+                    functionName:"approve()"
                 });
+                form.addButton({
+                    label: 'Reject',
+                    id: "custpage_btn_reject"
+                });*/
                 form.clientScriptFileId = 18125554;
                 context.response.writePage(form);
 

@@ -11,6 +11,12 @@ function() {
 
     let prior_sub_id = '';
     let obj = {};
+    function approve(){
+alert("test");
+    }
+    function saveRecord(){
+
+    }
     function fieldChanged(scriptContext) {
         try {
             debugger;
@@ -19,7 +25,23 @@ function() {
             var fld = scriptContext.fieldId;
             var sublist_id = scriptContext.sublistId;
 let sub_id;
-            if(sublist_id.indexOf('custpage_sublist_add_milestone') >-1) {
+/*if (fld == 'custpage_response') {
+   let __label=  currentRecord.getField(fld).label;
+   if(__label == 'Reject'){
+//uncheck everything
+       let ii=0;
+       while (Object.keys(obj).length >0){
+           for (const prop in obj) {
+               if ('custpage_sublist_add_milestone' + prop) {
+
+              let xx= obj[prop];
+           }
+           }
+       }
+   }
+
+}
+      */      if(sublist_id.indexOf('custpage_sublist_add_milestone') >-1) {
                 sub_id = sublist_id.replace('custpage_sublist_add_milestone', '');
             }
            // if(!sub_id) sub_id= current_sub_id;
@@ -105,6 +127,8 @@ if(prior_sub_id != sub_id){
     return {
 
         fieldChanged: fieldChanged,
+        saveRecord:saveRecord,
+        approve:approve
 
     };
     
