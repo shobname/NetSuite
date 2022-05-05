@@ -11,12 +11,38 @@ function() {
 
     let prior_sub_id = '';
     let obj = {};
-    function approve(){
-alert("test");
-    }
-    function saveRecord(){
+   function saveRecord(scriptContext){
+debugger;
+       var currentRecord = scriptContext.currentRecord;
+       let __label= currentRecord.getValue('custpage_response');
 
-    }
+       if(__label =='reject') return true;
+
+var ii=1;
+while(currentRecord.getLineCount('custpage_sublist_add_milestone'+ii) >0){
+
+    var numLines = currentRecord.getLineCount('custpage_sublist_add_milestone'+ii);
+
+        var _lineNumber = currentRecord.findSublistLineWithValue({
+            sublistId: 'custpage_sublist_add_milestone' + ii,
+            fieldId: 'custpage_select_box' + ii,
+            value: 'T'
+        });
+       if(_lineNumber ==-1){
+           alert('Please select your option')
+           return false;
+       }
+
+ii++;
+
+
+}
+
+       return true;
+   }
+
+
+
     function fieldChanged(scriptContext) {
         try {
             debugger;
@@ -25,23 +51,40 @@ alert("test");
             var fld = scriptContext.fieldId;
             var sublist_id = scriptContext.sublistId;
 let sub_id;
-/*if (fld == 'custpage_response') {
-   let __label=  currentRecord.getField(fld).label;
-   if(__label == 'Reject'){
-//uncheck everything
-       let ii=0;
-       while (Object.keys(obj).length >0){
-           for (const prop in obj) {
-               if ('custpage_sublist_add_milestone' + prop) {
 
-              let xx= obj[prop];
+if (fld == 'custpage_response') {
+   let __label= currentRecord.getValue(fld);
+
+
+   if(__label == 'reject'){
+//uncheck everything
+
+           for (const sub_id in obj) {
+               if ('custpage_sublist_add_milestone' + sub_id) {
+                   var _lineNumber = currentRecord.findSublistLineWithValue({
+                       sublistId: 'custpage_sublist_add_milestone' + sub_id,
+                       fieldId: 'custpage_child_internalid' + sub_id,
+                       value: obj[sub_id]
+                   });
+
+                   var recordLine = currentRecord.selectLine({
+                       sublistId: 'custpage_sublist_add_milestone' + sub_id,
+                       line: _lineNumber
+                   });
+
+                   currentRecord.setCurrentSublistValue({
+                       sublistId: 'custpage_sublist_add_milestone' + sub_id,
+                       fieldId: 'custpage_select_box' + sub_id,
+                       value: false
+                   });
+
            }
            }
-       }
+
    }
 
 }
-      */      if(sublist_id.indexOf('custpage_sublist_add_milestone') >-1) {
+           if(sublist_id.indexOf('custpage_sublist_add_milestone') >-1) {
                 sub_id = sublist_id.replace('custpage_sublist_add_milestone', '');
             }
            // if(!sub_id) sub_id= current_sub_id;
@@ -127,8 +170,7 @@ if(prior_sub_id != sub_id){
     return {
 
         fieldChanged: fieldChanged,
-        saveRecord:saveRecord,
-        approve:approve
+        saveRecord:saveRecord
 
     };
     

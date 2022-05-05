@@ -16,23 +16,42 @@ const updateCustomerResponse=(resp,uniqueKey)=>{
         type: "customrecord_ntx_cs_user_response_parent",
         filters:
             [
-                ["custrecord_ntx_cs_lst_uniquekey","equalto",uniqueKey]
-               ,
+                ["custrecord_ntx_cs_lst_uniquekey","equalto",uniqueKey],
                 "AND",
-                ["custrecord_ntx_cs_lst_customer_response","anyof","1"]
+                ["custrecord_ntx_cs_lst_current_status","anyof","2"]
+            ],columns:
+            [
+                search.createColumn({
+                    name: "internalid",
+                    join: "CUSTRECORD_NTX_CS_LST_PARENT_SO"
+                })
             ]
     });
+  //throw  customrecord_ntx_cs_user_response_parentSearchObj.save("test");
     var searchResultCount = customrecord_ntx_cs_user_response_parentSearchObj.runPaged().count;
     log.debug("customrecord_ntx_cs_user_response_parentSearchObj result count",searchResultCount);
+  //  throw searchResultCount;
     if(searchResultCount ==0) return false;
     customrecord_ntx_cs_user_response_parentSearchObj.run().each(function(result){
         // .run().each has a limit of 4,000 results
+        if(resp =='approve'){
+        let child_id =  result.getValue({
+            name: "internalid",
+            join: "CUSTRECORD_NTX_CS_LST_PARENT_SO"
+        })
+        record.submitFields({
+            type:'customrecord_ntx_cs_user_response',
+            id:child_id,
+            values:{ 'custrecord_ntx_cs_selected_by_user': 'T'}
+        })}
       let parent_id=  result.id;
+
 
     record.submitFields({
         type:'customrecord_ntx_cs_user_response_parent',
         id:parent_id,
-        values:{'custrecord_ntx_cs_lst_customer_response':3,
+        values:{'custrecord_ntx_cs_lst_current_status':3,
+
             'custrecord_ntx_cs_lst_customer_response':resp =='approve'? 1:2,
             'custrecord_ntx_cs_dt_response_received':dt}
     })
@@ -45,7 +64,7 @@ const updateCustomerResponse=(resp,uniqueKey)=>{
 
             var resp = request.parameters.resp;
             var uniqueNum = request.parameters.lineId;
-           // throw resp;
+
             let successful = updateCustomerResponse(resp,uniqueNum);
             let msg = successful?'Thankyou for your response, its recorded in the system.':'Response not recorded, this order is already swapped.please contact fulfillment@nutanix.com';
 

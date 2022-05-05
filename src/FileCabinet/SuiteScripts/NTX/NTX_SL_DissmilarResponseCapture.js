@@ -8,13 +8,20 @@ define(['SuiteScripts/NTX/NTX_Lib_Swap.js','N/search','N/record','N/ui/serverWid
     (libCS,search,record,ui,format) => {
 
         const getResultsFromUniqueKey=(unique_key)=>{
+         //   throw unique_key;
             var customrecord_ntx_cs_user_response_parentSearchObj = search.create({
                 type: "customrecord_ntx_cs_user_response_parent",
+
+                // title: 'shobiya' + new Date(),
                 filters:
                     [
                         ["custrecord_ntx_cs_lst_uniquekey","equalto",unique_key],
                         'and',
-                        ["isinactive","is",'F']
+                        ["isinactive","is",'F'],
+                        'and',
+                        ['custrecord_ntx_cs_lst_current_status', 'is',2],
+                        'and',
+                        ["custrecord_ntx_cs_lst_parent_so.isinactive","is","F"]
                     ],
                 columns:
                     [
@@ -47,6 +54,8 @@ define(['SuiteScripts/NTX/NTX_Lib_Swap.js','N/search','N/record','N/ui/serverWid
                         })
                     ]
             });
+       //  let x=   customrecord_ntx_cs_user_response_parentSearchObj.save();
+         //log.debug(';test',x)
             var searchResultCount = customrecord_ntx_cs_user_response_parentSearchObj.runPaged().count;
             log.debug('count',searchResultCount);
             return customrecord_ntx_cs_user_response_parentSearchObj;
@@ -63,33 +72,40 @@ define(['SuiteScripts/NTX/NTX_Lib_Swap.js','N/search','N/record','N/ui/serverWid
                 var unique_key = request.parameters.unique_key;
 
                 let customrecord_ntx_cs_user_response_parentSearchObj = getResultsFromUniqueKey(unique_key);
-               // var searchResultCount = customrecord_ntx_cs_user_response_parentSearchObj.runPaged().count;
+                var searchResultCount = customrecord_ntx_cs_user_response_parentSearchObj.runPaged().count;
                 var _mainbody = '';
                 //throw searchResultCount;
+                if(searchResultCount ==0){
+                   throw "This swapping is processed, please contact fulfillment@nutanix.com more details.";
+                }
 
 let sub_id=1;
 let all_from_sku=[];
                 let num='';
                 var sublist ='';
                 let x=0;
+
                 var approve = form.addField({
                     id: 'custpage_response',
                     label: 'Approve',
                     type: 'RADIO',
-                    source: "new1",
-                    name:'approve'
+                    source: "approve",
+
                  //   container: "custpage_filtergroup"
                 });
-                approve.defaultValue = 'approve';
+             // approve.defaultValue = 'approve1';
 
                 var reject = form.addField({
                     id: 'custpage_response',
                     label: 'Reject',
                     type: 'RADIO',
-                    source: "new",
-                    name:'reject'
+                    source: "reject",
+
                   //  container: "custpage_filtergroup"
                 });
+                form.updateDefaultValues({
+                    values: { custpage_response: 'approve' }
+                })
 
               //  action1.defaultValue ='F';
                 customrecord_ntx_cs_user_response_parentSearchObj.run().each(function(result) {
@@ -99,9 +115,9 @@ let all_from_sku=[];
 let current_status  = result.getValue({
                         name: "custrecord_ntx_cs_lst_current_status"
                     });
-if(current_status !=2){
-     //throw "This swapping is processed, please contact fulfillment@nutanix.com more details. "
-}
+//if(current_status !=2){
+    // throw "This swapping is processed, please contact fulfillment@nutanix.com more details. "
+//}
                         let option_internalid = result.getValue({
                             name: "internalid",
                             join: "CUSTRECORD_NTX_CS_LST_PARENT_SO"
@@ -120,7 +136,8 @@ if(current_status !=2){
 
                     let from_sku=parse_data['from_sku'];
 log.debug('all sku',all_from_sku.indexOf(from_sku));
-                    if(all_from_sku.indexOf(from_sku)==-1) {
+                   if(all_from_sku.indexOf(from_sku)==-1) {
+                   // if(1==1){
                          num=sub_id;//option_internalid; // Math.floor(Math.random() * 1000);
                          sublist = form.addSublist({
                             id: 'custpage_sublist_add_milestone'+sub_id,
@@ -222,6 +239,10 @@ x=0;
                     label: 'Reject',
                     id: "custpage_btn_reject"
                 });*/
+                form.addSubmitButton({
+                    id:'custpage_btn_submit',
+                    label:'submit response'
+                })
                 form.clientScriptFileId = 18125554;
                 context.response.writePage(form);
 
@@ -229,7 +250,7 @@ x=0;
             else if (context.request.method === 'POST') {
                 var req = context.request;
                 let i = 1;let parentid='';
-
+let isApproved ='F'
                 while (req.parameters['custpage_sublist_add_milestone'+i+'data']) {
                     var __row = req.parameters['custpage_sublist_add_milestone'+i+'data'];
 
@@ -239,7 +260,7 @@ x=0;
                         var fields = row.split('\u0001');
  parentid = fields[2];
                         if (fields[0] == 'T') {
-
+                            isApproved='T';
                             let selected_id = fields[1];//internalid//submit in this internal id as selected
 log.debug(selected_id);
                             record.submitFields({
@@ -264,12 +285,14 @@ log.debug(selected_id);
                     id: parentid,
                     values: {
                         'custrecord_ntx_cs_lst_current_status':3,
-                        'custrecord_ntx_cs_dt_response_received':dt
+                        'custrecord_ntx_cs_dt_response_received':dt,
+                        'custrecord_ntx_cs_lst_customer_response':isApproved =='T'? 1:2
                     }
                 });
 
-              //  var __row = req.parameters.custpage_sublist_add_milestone4data;
-                context.response.writePage('Thankyou, your response is stored in NetSuite');
+
+                context.response.write('Thankyou for your response, its recorded in the system');
+
 
 
 

@@ -14,6 +14,7 @@ define(['N/xml', 'N/search', 'N/render', 'N/email', 'N/record', 'N/format', 'N/r
         let SENDER = 3145069;
         let sku_details = {};
         let arr_from_sku = [];
+        let arr_from_sku_dissimilar= [];
         const XML_TYPE = {
             SIMILAR: 1,
             DISSIMILAR: 2
@@ -186,16 +187,18 @@ let result=searchResult[k]
                 let cm_email = (sku_details[Object.keys(sku_details)[0]]['cm_email']);
                 let unique_key = (sku_details[Object.keys(sku_details)[0]]['uniquenumber']);
 
-               _cc= _cc.push['fulfillment@nutanix.com'];
+                _cc.push('fulfillment@nutanix.com');
                 body = create_rej_link(unique_key, body)
                 //throw body;
                 if (cm_email) _cc.push(cm_email);
-                log.debug('cc', _cc.toString());
+              //  log.debug('cc', _cc.toString());
                 if (!disti_email) disti_email = cm_email;
                 to_email=disti_email;
             }
 else{
+                let cm_email = (sku_details[Object.keys(sku_details)[0]]['cm_email']);
                to_email = (sku_details[Object.keys(sku_details)[0]]['salesrep_email']);
+                if (cm_email) _cc.push(cm_email);
             }
 
             if (to_email) {
@@ -261,7 +264,8 @@ const createChildRecords_for_similar=(soid,recent_so_details,property)=>{
             'from_sku': recent_so_details[property]['from_sku'],
             'to_sku': recent_so_details[property]['to_sku'],
             'from_quan': recent_so_details[property]['from_quan'],
-            'to_quan': recent_so_details[property]['to_sku']
+            'to_quan': recent_so_details[property]['to_quan'],
+            'po_id': recent_so_details[property]['po_id']
         })
     });
 
@@ -282,7 +286,7 @@ const createChildRecord_Dissimilar =(soid,recent_so_details,property,uniquenumbe
     let     _model= recent_so_details[Object.keys(recent_so_details)[0]]['model'];
     log.debug('while',recent_so_details[property]['option' + i]);
     let _optionDetails = recent_so_details[property]['option' + i];
-
+    let po_id= recent_so_details[Object.keys(recent_so_details)[0]]['po_id'];
     let toSKU = _optionDetails['option' + i]['to'];
     let fromSKU = _optionDetails['option' + i]['from_sku'];
     let from_quan = _optionDetails['option' + i]['from_quan'];
@@ -315,6 +319,7 @@ const createChildRecord_Dissimilar =(soid,recent_so_details,property,uniquenumbe
         value: JSON.stringify({
             'from_sku': fromSKU,
             'to_sku': toSKU,
+            'po_id':po_id,
             'from_quan':from_quan,
             'to_quan': to_quan,
             'sf_req_id':sf_req_id,
@@ -412,6 +417,7 @@ log.debug('childid',__id);
             }
             else{
                 var _mainbody = '';
+              //  throw JSON.stringify(sku_details);
                 for (const property in sku_details) {
                     let i = 1;
 
@@ -501,6 +507,8 @@ log.debug('childid',__id);
 
                 let soId = result.id;
                 let line_id = result.getValue('line');
+                //create_salesorderSearchObj
+                let po_id = result.getValue('purchaseorder');
                 let sf_order_line = result.getValue('custcol_sf_order_line_id');
                 let sf_required_line = result.getValue('custcol_sf_order_required_by_line');
                 let custom_record_parent_id = result.getValue({
@@ -539,6 +547,7 @@ log.debug('salesrepema',salesrepEmail);
                             "to_sku": to_sku,
                             "from_quan": from_quan,
                             "to_quan": to_quan,
+                            "po_id":po_id,
                             "distributor_email": result.getValue('custbody_disti_email_address'),
                             "cm_email": result.getValue({
                                 name: "email",
@@ -554,6 +563,7 @@ log.debug('salesrepema',salesrepEmail);
                             'line_id': line_id,
                             "soId": soId,
                             "model":model,
+                            "po_id":po_id,
                             "sf_order_line":sf_order_line,
                             "sf_required_line":sf_required_line,
                             "salesrep_email":salesrepEmail
@@ -579,12 +589,14 @@ log.debug('js',JSON.stringify(recent_so_details));
                     recent_so = soId;
                     recent_so_details = {};
                     if (_type == 1){
+                        let to_quan =parseInt(to_quan_template)/parseInt(from_quan_template) * parseInt(from_quan)
                         recent_so_details[line_id] = {
                             'custom_record_parent_id': custom_record_parent_id,
                             '_type': _type,
                             "soId": soId,
                             "from_sku": from_sku,
                             "to_sku": to_sku,
+                            "po_id":po_id,
                             "from_quan": from_quan,
                             "to_quan": to_quan,
                             "distributor_email": result.getValue('custbody_disti_email_address'),
@@ -602,6 +614,7 @@ log.debug('js',JSON.stringify(recent_so_details));
                             'line_id': line_id,
                             "soId": soId,
                             "model":model,
+                            "po_id":po_id,
                             "sf_order_line":sf_order_line,
                             "sf_required_line":sf_required_line,
                             "salesrep_email":salesrepEmail
@@ -663,6 +676,7 @@ return recent_so_details;
                 // title: 'testing' + new Date(),
                 filters: fil,
                 columns: [
+                    search.createColumn({name: "purchaseorder", label: "Purchase Order"}),
                     search.createColumn({
                         name: "item",
                         label: "Item"
