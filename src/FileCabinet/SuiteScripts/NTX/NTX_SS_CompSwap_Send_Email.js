@@ -127,7 +127,7 @@ let result=searchResult[k]
                     }
                 }
                 else {
-
+                    arr_from_sku_dissimilar.push(from_sku);
                   let current_key = getProperty(from_sku, sku_details);
                     let _optionKey = 'option' + current_key;
                     if (!current_key){
@@ -537,7 +537,7 @@ log.debug('salesrepema',salesrepEmail);
                 if (recent_so == soId) {
                     if (_type == 1){
 
-                        let to_quan =parseInt(to_quan_template)/parseInt(from_quan_template) * parseInt(from_quan)
+                        let to_quan =parseInt(to_quan_template)/parseInt(from_quan_template) * parseInt(from_quan);
                         recent_so_details[line_id] = {
                             'custom_record_parent_id': custom_record_parent_id,
                             '_type': _type,
@@ -574,6 +574,7 @@ log.debug('salesrepema',salesrepEmail);
                   //  log.debug('storing records')
                     if (searchResultCount == (i + 1)) {//send for last record, and if only salesorder
                         log.debug('sending email');
+                        //check here if model matching with sku
                         recent_so_details = createWaitForResponse(soId, recent_so_details, custom_record_parent_id);
 log.debug('js',JSON.stringify(recent_so_details));
 
@@ -632,6 +633,7 @@ log.debug('js',JSON.stringify(recent_so_details));
             }
         }
         }
+
         const setOptions=(line_id,recent_so_details,sku_details,from_quan)=>{
             let i=1;
             while (sku_details['option'+i]) {
