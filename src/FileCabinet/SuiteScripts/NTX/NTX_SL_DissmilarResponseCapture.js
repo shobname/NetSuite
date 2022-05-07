@@ -105,19 +105,25 @@ let all_from_sku=[];
                 });
                 form.updateDefaultValues({
                     values: { custpage_response: 'approve' }
-                })
+                });
+                var actionField = form.addField({
+                    id: 'custpage_rejection_reason',
+                    label: 'Rejection Reason',
+                    type: serverWidget.FieldType.TEXTAREA
+                });
+                actionField.updateDisplayType({
+                    displayType : serverWidget.FieldDisplayType.DISABLED
+                });
 
-              //  action1.defaultValue ='F';
+
                 customrecord_ntx_cs_user_response_parentSearchObj.run().each(function(result) {
 
 
 
-let current_status  = result.getValue({
+                    let current_status  = result.getValue({
                         name: "custrecord_ntx_cs_lst_current_status"
                     });
-//if(current_status !=2){
-    // throw "This swapping is processed, please contact fulfillment@nutanix.com more details. "
-//}
+
                         let option_internalid = result.getValue({
                             name: "internalid",
                             join: "CUSTRECORD_NTX_CS_LST_PARENT_SO"
@@ -228,17 +234,7 @@ x=0;
                     return true;
                     });
 
-//i++;
 
-               /* form.addButton({
-                    label: 'Approve',
-                    id: "custpage_btn_approve",
-                    functionName:"approve()"
-                });
-                form.addButton({
-                    label: 'Reject',
-                    id: "custpage_btn_reject"
-                });*/
                 form.addSubmitButton({
                     id:'custpage_btn_submit',
                     label:'submit response'
@@ -250,6 +246,8 @@ x=0;
             else if (context.request.method === 'POST') {
                 var req = context.request;
                 let i = 1;let parentid='';
+
+             let rejection_Reason = req.parameters['custpage_rejection_reason'] || '';
 let isApproved ='F'
                 while (req.parameters['custpage_sublist_add_milestone'+i+'data']) {
                     var __row = req.parameters['custpage_sublist_add_milestone'+i+'data'];
@@ -286,7 +284,8 @@ log.debug(selected_id);
                     values: {
                         'custrecord_ntx_cs_lst_current_status':3,
                         'custrecord_ntx_cs_dt_response_received':dt,
-                        'custrecord_ntx_cs_lst_customer_response':isApproved =='T'? 1:2
+                        'custrecord_ntx_cs_lst_customer_response':isApproved =='T'? 1:2,
+                        'custrecord_ntx_cs_error_log':rejection_Reason
                     }
                 });
 

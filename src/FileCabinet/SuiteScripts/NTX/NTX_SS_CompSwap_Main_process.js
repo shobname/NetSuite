@@ -3,11 +3,15 @@
  * @NScriptType ScheduledScript
  */
 
-define(['N/search', 'N/record','N/error'],
+define(['N/search', 'N/record','N/error','N/runtime'],
 
-    (search, record,error) => {
-        const searchId = 20115;
-        const DUMMY_ITEM = 123717;
+    (search, record,error,runtime) => {
+        let script = runtime.getCurrentScript();
+        const searchId = script.getParameter('custscript_ntx_ss_compswap_process');
+        const DUMMY_ITEM = script.getParameter('custscript_ntx_ss_compswap_po_item');
+
+      //  const searchId = 20115;
+      //  const DUMMY_ITEM = 123717;
 
         const RemoveLines_ClosePO = (po_id) => {
 
@@ -130,10 +134,17 @@ model = {string} NX-8155-G7-4214*/
                     value: _values[property],
                     line: actual_LineId
                 });
-
-
-
             }
+            log.debug('setting hold signal');
+            soRec.setValue({
+                fieldId: 'custbody_ordertype',
+                value: 2
+            });
+            soRec.setValue({
+                fieldId: 'custbody_resend_order',
+                value: 'T'
+            });
+
             soRec.save();
             //create po
             create_spl_ord_po(soId, vendorId);
