@@ -81,8 +81,7 @@ define(['N/xml', 'N/search', 'N/render', 'N/email', 'N/record', 'N/format', 'N/r
                 log.debug('data for ex', arr_model_dissimilar.toString() + "     " + JSON.stringify(obj_model_sf_id));
                 //   throw JSON.stringify(sku_details);
                 log.debug('arr_sku', arr_from_sku.toString());
-                //getSalesOrders_sendEmails(arr_from_sku, obj_model_sf_id); //send email for salesorders,
-                loopSO(obj_model_sf_id);
+                getSalesOrders_sendEmails(arr_from_sku, obj_model_sf_id); //send email for salesorders,
             }
 
         }
@@ -341,7 +340,7 @@ define(['N/xml', 'N/search', 'N/render', 'N/email', 'N/record', 'N/format', 'N/r
             let __id = customRecord.save();
             return __id;
         }
-        const createErrorMsg =(parentid,__type,err)=>{
+        const createErrorMsg =(parentid,__type)=>{
             record.submitFields({
                 type: 'customrecord_ntx_cs_user_response_parent',
                 id: parentid,
@@ -349,7 +348,7 @@ define(['N/xml', 'N/search', 'N/render', 'N/email', 'N/record', 'N/format', 'N/r
 
                     'custrecord_ntx_cs_xml_type': __type,
                     'custrecord_ntx_cs_lst_current_status': 5,
-                    'custrecord_ntx_cs_error_log':err
+                    'custrecord_ntx_cs_error_log':'To email does not exist'
 
                 }
             });
@@ -490,84 +489,74 @@ define(['N/xml', 'N/search', 'N/render', 'N/email', 'N/record', 'N/format', 'N/r
                 return body;
             }
         }
-const loopSO=(obj_model_sf_id)=>{
-    var customrecord_ntx_cs_user_response_parentSearchObj = search.create({
-        type: "customrecord_ntx_cs_user_response_parent",
-        filters:
-            [
-                ["custrecord_ntx_cs_lst_current_status","anyof","1"],
-                "AND",
-                ["isinactive","is","F"]
-            ],
-        columns:
-            [
-                "custrecord_ntx_cs_lst_salesorder"
-            ]
-    });
-    var searchResultCount = customrecord_ntx_cs_user_response_parentSearchObj.runPaged().count;
-    log.debug("total so in custom record",searchResultCount);
-    customrecord_ntx_cs_user_response_parentSearchObj.run().each(function(result){
-        let so_id = result.getValue('custrecord_ntx_cs_lst_salesorder');
-
-        let fil = libCS.getFilters(arr_from_sku,'',so_id);
-        let salesorderSearchObj = libCS.create_salesorderSearchObj(fil);
-        var searchResultCount = salesorderSearchObj.runPaged().count;
-        let recent_so = null;
-        let recent_so_details = {};
-
-        if (searchResultCount > 0) {
-//just that one so
-            var searchResult = salesorderSearchObj.run().getRange({
-                start: 0,
-                end: searchResultCount
-            });
-
-            for (var i = 0; i < searchResultCount; i++) {
-
-                let result = searchResult[i];
-
-                let from_sku = result.getText('item');
 
 
-                let soId = result.id;
-                log.debug('current so', soId);
-                log.debug('recentso',recent_so);
-                let line_id = result.getValue('line');
+        const getSalesOrders_sendEmails = (arr_from_sku, obj_model_sf_id) => {
+            let fil = libCS.getFilters(arr_from_sku);
 
-                let po_id = result.getValue('purchaseorder');
-                let sf_order_line = result.getValue('custcol_sf_order_line_id');
-                let sf_required_line = result.getValue('custcol_sf_order_required_by_line');
-                let custom_record_parent_id = result.getValue({
-                    name: "internalid",
-                    join: "CUSTRECORD_NTX_CS_LST_SALESORDER"
 
+            let salesorderSearchObj = libCS.create_salesorderSearchObj(fil);
+
+            var searchResultCount = salesorderSearchObj.runPaged().count;
+            log.debug("salesorderSearchObj result count", searchResultCount);
+            let recent_so = null;
+            let recent_so_details = {};
+
+            if (searchResultCount > 0) {
+
+                var searchResult = salesorderSearchObj.run().getRange({
+                    start: 0,
+                    end: searchResultCount
                 });
-                let disti_email = result.getValue('custbody_disti_email_address');
-                let salesrepEmail = result.getValue({
-                    name: "email",
-                    join: "custbody14"
-                });
-                log.debug('salesrep email', salesrepEmail);
-                let from_quan = result.getValue('quantity');
 
 
-                let _type = sku_details[from_sku]['_type'];
-
-                let to_sku = sku_details[from_sku]['to'];
-                let to_quan_template = sku_details[from_sku]['to_quan']; //result.getValue('quantity');//sku_details
-                let from_quan_template = sku_details[from_sku]['from_quan'];
-                let model = sku_details[from_sku]['model'];
-                log.audit('parent id', custom_record_parent_id);
-
-                if (recent_so == null) recent_so = soId;
-               // if (recent_so == soId) {
+                for (var i = 0; i < searchResultCount; i++) {
+//processoneby one so
+                    let result = searchResult[i];
+                    //}
+                    //  salesorderSearchObj.run().each(function(result) {
+                    let from_sku = result.getText('item');
 
 
-                    if ((_type == 1 && !disti_email) || (_type == 2 && !salesrepEmail)) {
-                        createErrorMsg(custom_record_parent_id, _type,'To Email is missing');
-                       break;// continue;
-                    }
-                    if(_type ==1){
+                    let soId = result.id;
+                    log.debug('current so', soId);
+                    log.debug('recentso',recent_so);
+                    let line_id = result.getValue('line');
+
+                    let po_id = result.getValue('purchaseorder');
+                    let sf_order_line = result.getValue('custcol_sf_order_line_id');
+                    let sf_required_line = result.getValue('custcol_sf_order_required_by_line');
+                    let custom_record_parent_id = result.getValue({
+                        name: "internalid",
+                        join: "CUSTRECORD_NTX_CS_LST_SALESORDER"
+
+                    });
+                    let disti_email = result.getValue('custbody_disti_email_address');
+                    let salesrepEmail = result.getValue({
+                        name: "email",
+                        join: "custbody14"
+                    });
+                    log.debug('salesrepema', salesrepEmail);
+                    let from_quan = result.getValue('quantity');
+
+
+                    let _type = sku_details[from_sku]['_type'];
+
+                    let to_sku = sku_details[from_sku]['to'];
+                    let to_quan_template = sku_details[from_sku]['to_quan']; //result.getValue('quantity');//sku_details
+                    let from_quan_template = sku_details[from_sku]['from_quan'];
+                    let model = sku_details[from_sku]['model'];
+                    log.audit('parent id', custom_record_parent_id);
+
+                    if (recent_so == null) recent_so = soId;
+                    if (recent_so == soId) {
+
+
+                        if ((_type == 1 && !disti_email) || (_type == 2 && !salesrepEmail)) {
+                            createErrorMsg(custom_record_parent_id, _type);
+                            continue;
+                        }
+if(_type ==1){
                         let to_quan = parseInt(to_quan_template) / parseInt(from_quan_template) * parseInt(from_quan);
                         recent_so_details[line_id] = {
                             'custom_record_parent_id': custom_record_parent_id,
@@ -587,13 +576,10 @@ const loopSO=(obj_model_sf_id)=>{
                         }
                     } else {
 
-                        //check here if model matching with sku
-                        let exist = checkModel_Exist_in_SO(obj_model_sf_id, recent_so_details);
-                        log.debug('model exist?', exist);
-                        if (!exist) {
-                            createErrorMsg(custom_record_parent_id, _type,'Model is not matching in sO');
-                            break;
-                        }//continue;
+        //check here if model matching with sku
+        let exist = checkModel_Exist_in_SO(obj_model_sf_id, recent_so_details);
+        log.debug('model exist?', exist);
+        if (!exist) continue;
 
                         recent_so_details[line_id] = {
                             'custom_record_parent_id': custom_record_parent_id,
@@ -610,38 +596,89 @@ const loopSO=(obj_model_sf_id)=>{
                         recent_so_details = setOptions(line_id, recent_so_details, sku_details[from_sku], from_quan);
 
                     }
-             //   }
-                if (searchResultCount == (i + 1)) { //send for last record, and if only salesorder
-                    if (_type != 1) {
-                        //check here if model matching with sku
-                        let exist = checkModel_Exist_in_SO(obj_model_sf_id, recent_so_details);
-                        log.debug('model exist?', exist);
-                        if (!exist){
-                            createErrorMsg(custom_record_parent_id, _type,'Model is not matching in sO');
-                            break;//continue;
-                        }
-                    }
-                    if ((_type == 1 && !disti_email ) || (_type ==2 && !salesrepEmail)) {
-                        createErrorMsg(custom_record_parent_id,_type,'TO Email missing in SO');
-                        break;
-                    }
-                    recent_so_details = createWaitForResponse(recent_so, recent_so_details, custom_record_parent_id);
-
-
                 }
+                    if (searchResultCount == (i + 1)) { //send for last record, and if only salesorder
+                        if (_type != 1) {
+                            //check here if model matching with sku
+                            let exist = checkModel_Exist_in_SO(obj_model_sf_id, recent_so_details);
+                            log.debug('model exist?', exist);
+                            if (!exist) continue;
+                        }
+                        if ((_type == 1 && !disti_email ) || (_type ==2 && !salesrepEmail)) {
+                            createErrorMsg(custom_record_parent_id,_type);
+
+                            continue;
+
+                        }
+
+                        recent_so_details = createWaitForResponse(recent_so, recent_so_details, custom_record_parent_id);
+
+                        //  sendEmail(soId, recent_so_details, custom_record_parent_id);
+
+                    }
 
 
+                    else if (recent_so != soId) {
+                        //send email for prev so number
+                        //check model number
+                        if (_type != 1) {
+                            let exist = checkModel_Exist_in_SO(obj_model_sf_id, recent_so_details);
+                            log.debug('model exist?', exist);
+                            if (!exist) continue;
+                        }
+                        if((_type ==1 && !disti_email) || (_type ==2 && !salesrepEmail)){
+                            //store in parent
+                            createErrorMsg(custom_record_parent_id,_type);
+                            continue;
+                        }
+                        recent_so_details = createWaitForResponse(recent_so, recent_so_details, custom_record_parent_id);
+                        //  sendEmail(recent_so, recent_so_details, custom_record_parent_id);
+                        recent_so = soId;
+                        recent_so_details = {};
+                        if (_type == 1) {
+                            let to_quan = parseInt(to_quan_template) / parseInt(from_quan_template) * parseInt(from_quan)
+                            recent_so_details[line_id] = {
+                                'custom_record_parent_id': custom_record_parent_id,
+                                '_type': _type,
+                                "soId": recent_so,
+                                "from_sku": from_sku,
+                                "to_sku": to_sku,
+                                "po_id": po_id,
+                                "from_quan": from_quan,
+                                "to_quan": to_quan,
+                                "distributor_email": disti_email,
+                                "cm_email": result.getValue({
+                                    name: "email",
+                                    join: "CUSTBODY_SEND_XML_TO"
+                                })
+                            }
+                        } else {
+                            //here check for the model and remove
+                            let model = sku_details[from_sku]['model'];
+                            recent_so_details[line_id] = {
+                                'custom_record_parent_id': custom_record_parent_id,
+                                '_type': _type,
+                                'line_id': line_id,
+                                "soId": recent_so,
+                                "model": model,
+                                "po_id": po_id,
+                                "sf_order_line": sf_order_line,
+                                "sf_required_line": sf_required_line,
+                                "salesrep_email": salesrepEmail
+                            }
+                            recent_so_details = setOptions(line_id, recent_so_details, sku_details[from_sku], from_quan);
+
+                        }
+
+                    }
 
 
+                    //send email
+                    //   return true;
+                    // });
+                }
             }
-
         }
-        return true;
-    });
-
-}
-
-
         const checkModel_Exist_in_SO = (obj_model_sf_id, recent_so_details) => {
 
             if (Object.keys(obj_model_sf_id).length == 0) return false;

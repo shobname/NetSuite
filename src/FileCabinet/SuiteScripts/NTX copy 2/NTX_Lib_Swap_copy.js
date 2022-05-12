@@ -187,12 +187,10 @@ define(['N/search','N/record','N/url','N/render','N/format'],
             customRecord.save();
         }
 
-        const getFilters = (arr_from_sku, __model,so_id) => {
+        const getFilters = (arr_from_sku, __model) => {
             var searchFilters = [];
-            if(so_id) {
-                searchFilters.push(["internalidnumber", "equalto", so_id]);
-                searchFilters.push('AND');
-            }
+            /* searchFilters.push(["internalidnumber", "equalto", "18668146"]);
+             searchFilters.push('AND');*/
             searchFilters.push(['mainline', 'is', 'F']);
             searchFilters.push('AND');
             searchFilters.push(["custrecord_ntx_cs_lst_salesorder.custrecord_ntx_cs_lst_current_status", "anyof", "1"]);
