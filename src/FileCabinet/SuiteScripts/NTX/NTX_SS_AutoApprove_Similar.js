@@ -2,6 +2,9 @@
  * @NApiVersion 2.1
  * @NScriptType ScheduledScript
  */
+
+/*1.0       shobiya     april 21 2022       /BA-89159 component swap
+ */
 define(['N/record','N/search','N/format','N/runtime'],
     
     (record,search,format,runtime) => {

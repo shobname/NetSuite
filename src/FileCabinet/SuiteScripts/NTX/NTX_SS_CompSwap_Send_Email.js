@@ -11,10 +11,6 @@
 define(['N/xml', 'N/search', 'N/render', 'N/email', 'N/record', 'N/format', 'N/runtime', 'N/url', 'SuiteScripts/NTX/NTX_Lib_Swap.js'],
 
     (xml, search, render, email, record, format, runtime, url, libCS) => {
-        var currScript = runtime.getCurrentScript();
-        const SENDER = currScript.getParameter({
-            name: 'custscript_ntx_cs_mail_sender'
-        });
 
         // let SENDER = 3145069;
         let sku_details = {};
@@ -24,17 +20,14 @@ define(['N/xml', 'N/search', 'N/render', 'N/email', 'N/record', 'N/format', 'N/r
             SIMILAR: 1,
             DISSIMILAR: 2
         }
-        const EMAIL_TEMPLATE = {
-            SIMILAR: 4588,
-            DISSIMILAR: 4589
-        }
-       /* const getProperty = (propertyName, obj) => {
 
-            if (!obj.hasOwnProperty(propertyName)) {
-                return null;
-            }
-            return parseInt(obj[propertyName]['currentkey']) + 1;
-        }*/
+        /* const getProperty = (propertyName, obj) => {
+
+             if (!obj.hasOwnProperty(propertyName)) {
+                 return null;
+             }
+             return parseInt(obj[propertyName]['currentkey']) + 1;
+         }*/
         const execute = (scriptContext) => {
 
             sku_details = {};
@@ -201,7 +194,23 @@ define(['N/xml', 'N/search', 'N/render', 'N/email', 'N/record', 'N/format', 'N/r
                 //  var f=0;
             }
         }
-        const sendEmail = (soId, sku_details) => {
+        const sendEmail = (soId, sku_details,custrec_parent_id) => {
+            log.debug('obj to send',JSON.stringify(sku_details));
+            var currScript = runtime.getCurrentScript();
+            const EMAIL_TEMPLATE = {
+                SIMILAR: currScript.getParameter({
+                    name: 'custscript_ntx_cs_sim_templ'
+                }),//4100,
+                DISSIMILAR: currScript.getParameter({
+                    name: 'custscript_ntx_cs_dissim_templ'
+                })
+            }
+
+            const SENDER = currScript.getParameter({
+                name: 'custscript_ntx_cs_mail_sender'
+            });
+
+
             //store custom record, get id
             //create custom record, get id from here.
             //check for similar and disc
@@ -237,16 +246,18 @@ define(['N/xml', 'N/search', 'N/render', 'N/email', 'N/record', 'N/format', 'N/r
                 //throw body;
                 if (cm_email) _cc.push(cm_email);
                 //  log.debug('cc', _cc.toString());
-              //  if (!disti_email) disti_email = cm_email;
+                //  if (!disti_email) disti_email = cm_email;
                 to_email = disti_email;
             } else {
                 let cm_email = (sku_details[Object.keys(sku_details)[0]]['cm_email']);
                 to_email = (sku_details[Object.keys(sku_details)[0]]['salesrep_email']);
                 if (cm_email) _cc.push(cm_email);
             }
+
             log.debug('email', to_email);
+            log.debug('so to send email',soId);
             if (to_email) {
-               libCS.TriggerHoldSignalFromSO(soId);
+                libCS.TriggerHoldSignalFromSO(soId);
                 email.send({
                     author: SENDER,
                     recipients: to_email,
@@ -255,11 +266,15 @@ define(['N/xml', 'N/search', 'N/render', 'N/email', 'N/record', 'N/format', 'N/r
                     body: body,
 
                     relatedRecords: {
-                        transactionId: soId
+                        transactionId: soId,
+                        customRecord:{
+                            id:'customrecord_ntx_cs_user_response_parent',
+                            recordType: custrec_parent_id //an integer value
+                        }
                     }
                 });
 
-                log.debug('email sent');
+                log.debug('email sent',soId);
             }
             //send email
         }
@@ -387,7 +402,7 @@ define(['N/xml', 'N/search', 'N/render', 'N/email', 'N/record', 'N/format', 'N/r
                 }
             });
 
-            sendEmail(soId, recent_so_details, custom_record_parent_id);
+            sendEmail(soid, recent_so_details, custom_record_parent_id);
 
             return recent_so_details;
         }
@@ -480,7 +495,7 @@ define(['N/xml', 'N/search', 'N/render', 'N/email', 'N/record', 'N/format', 'N/r
             let fil = libCS.getFilters(arr_from_sku);
 
 
-            let salesorderSearchObj = create_salesorderSearchObj(fil);
+            let salesorderSearchObj = libCS.create_salesorderSearchObj(fil);
 
             var searchResultCount = salesorderSearchObj.runPaged().count;
             log.debug("salesorderSearchObj result count", searchResultCount);
@@ -536,66 +551,66 @@ define(['N/xml', 'N/search', 'N/render', 'N/email', 'N/record', 'N/format', 'N/r
                     if (recent_so == soId) {
 
                         if ((_type == 1 && !disti_email ) || (_type ==2 && !salesrepEmail)){
-                                createErrorMsg(custom_record_parent_id,_type);
-                                continue;
-                            }
+                            createErrorMsg(custom_record_parent_id,_type);
+                            continue;
+                        }
 
-                            let to_quan = parseInt(to_quan_template) / parseInt(from_quan_template) * parseInt(from_quan);
-                            recent_so_details[line_id] = {
-                                'custom_record_parent_id': custom_record_parent_id,
-                                '_type': _type,
-                                'line_id': line_id,
-                                "soId": soId,
-                                "from_sku": from_sku,
-                                "to_sku": to_sku,
-                                "from_quan": from_quan,
-                                "to_quan": to_quan,
-                                "po_id": po_id,
-                                "distributor_email": result.getValue('custbody_disti_email_address'),
-                                "cm_email": result.getValue({
-                                    name: "email",
-                                    join: "CUSTBODY_SEND_XML_TO"
-                                })
-                            }
-                        } else {
+                        let to_quan = parseInt(to_quan_template) / parseInt(from_quan_template) * parseInt(from_quan);
+                        recent_so_details[line_id] = {
+                            'custom_record_parent_id': custom_record_parent_id,
+                            '_type': _type,
+                            'line_id': line_id,
+                            "soId": recent_so,
+                            "from_sku": from_sku,
+                            "to_sku": to_sku,
+                            "from_quan": from_quan,
+                            "to_quan": to_quan,
+                            "po_id": po_id,
+                            "distributor_email": result.getValue('custbody_disti_email_address'),
+                            "cm_email": result.getValue({
+                                name: "email",
+                                join: "CUSTBODY_SEND_XML_TO"
+                            })
+                        }
+                    } else {
 
-                            recent_so_details[line_id] = {
-                                'custom_record_parent_id': custom_record_parent_id,
-                                '_type': _type,
-                                'line_id': line_id,
-                                "soId": soId,
-                                "model": model,
-                                "po_id": po_id,
-                                "sf_order_line": sf_order_line,
-                                "sf_required_line": sf_required_line,
-                                "salesrep_email": salesrepEmail
-                            }
-                            recent_so_details = setOptions(line_id, recent_so_details, sku_details[from_sku], from_quan);
+                        recent_so_details[line_id] = {
+                            'custom_record_parent_id': custom_record_parent_id,
+                            '_type': _type,
+                            'line_id': line_id,
+                            "soId": recent_so,
+                            "model": model,
+                            "po_id": po_id,
+                            "sf_order_line": sf_order_line,
+                            "sf_required_line": sf_required_line,
+                            "salesrep_email": salesrepEmail
+                        }
+                        recent_so_details = setOptions(line_id, recent_so_details, sku_details[from_sku], from_quan);
+
+                    }
+
+                    if (searchResultCount == (i + 1)) { //send for last record, and if only salesorder
+                        if (_type != 1) {
+                            //check here if model matching with sku
+                            let exist = checkModel_Exist_in_SO(obj_model_sf_id, recent_so_details);
+                            log.debug('model exist?', exist);
+                            if (!exist) continue;
+                        }
+                        if ((_type == 1 && !disti_email ) || (_type ==2 && !salesrepEmail)) {
+                            createErrorMsg(custom_record_parent_id,_type);
+
+                            continue;
 
                         }
 
-                        if (searchResultCount == (i + 1)) { //send for last record, and if only salesorder
-                            if (_type != 1) {
-                                //check here if model matching with sku
-                                let exist = checkModel_Exist_in_SO(obj_model_sf_id, recent_so_details);
-                                log.debug('model exist?', exist);
-                                if (!exist) continue;
-                            }
-                            if ((_type == 1 && !disti_email ) || (_type ==2 && !salesrepEmail)) {
-                                createErrorMsg(custom_record_parent_id,_type);
+                        recent_so_details = createWaitForResponse(recent_so, recent_so_details, custom_record_parent_id);
 
-                                    continue;
+                        //  sendEmail(soId, recent_so_details, custom_record_parent_id);
 
-                            }
-
-                            recent_so_details = createWaitForResponse(soId, recent_so_details, custom_record_parent_id);
-
-                          //  sendEmail(soId, recent_so_details, custom_record_parent_id);
-
-                        }
+                    }
 
 
-                else if (recent_so != soId) {
+                    else if (recent_so != soId) {
                         //send email for prev so number
                         //check model number
                         if (_type != 1) {
@@ -603,13 +618,13 @@ define(['N/xml', 'N/search', 'N/render', 'N/email', 'N/record', 'N/format', 'N/r
                             log.debug('model exist?', exist);
                             if (!exist) continue;
                         }
-if((_type ==1 && !disti_email) || (_type ==2 && !salesrepEmail)){
-    //store in parent
-    createErrorMsg(custom_record_parent_id,_type);
-    continue;
-}
-                        recent_so_details = createWaitForResponse(soId, recent_so_details, custom_record_parent_id);
-                      //  sendEmail(recent_so, recent_so_details, custom_record_parent_id);
+                        if((_type ==1 && !disti_email) || (_type ==2 && !salesrepEmail)){
+                            //store in parent
+                            createErrorMsg(custom_record_parent_id,_type);
+                            continue;
+                        }
+                        recent_so_details = createWaitForResponse(recent_so, recent_so_details, custom_record_parent_id);
+                        //  sendEmail(recent_so, recent_so_details, custom_record_parent_id);
                         recent_so = soId;
                         recent_so_details = {};
                         if (_type == 1) {
@@ -617,7 +632,7 @@ if((_type ==1 && !disti_email) || (_type ==2 && !salesrepEmail)){
                             recent_so_details[line_id] = {
                                 'custom_record_parent_id': custom_record_parent_id,
                                 '_type': _type,
-                                "soId": soId,
+                                "soId": recent_so,
                                 "from_sku": from_sku,
                                 "to_sku": to_sku,
                                 "po_id": po_id,
@@ -636,7 +651,7 @@ if((_type ==1 && !disti_email) || (_type ==2 && !salesrepEmail)){
                                 'custom_record_parent_id': custom_record_parent_id,
                                 '_type': _type,
                                 'line_id': line_id,
-                                "soId": soId,
+                                "soId": recent_so,
                                 "model": model,
                                 "po_id": po_id,
                                 "sf_order_line": sf_order_line,

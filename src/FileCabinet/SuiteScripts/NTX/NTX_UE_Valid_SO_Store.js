@@ -4,6 +4,10 @@
  */
 /*
 * throw error if sames so, in ready status*/
+
+/*1.0       shobiya     april 21 2022       /BA-89159 component swap
+ */
+
 define(['N/search','N/record'],
     
     (search,record) => {

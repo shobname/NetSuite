@@ -3,6 +3,9 @@
  * @NScriptType ClientScript
  * @NModuleScope SameAccount
  */
+/*1.0       shobiya     april 21 2022       /BA-89159 component swap
+ */
+
 define(['N/runtime'],
 
 function(runtime) {

@@ -1,9 +1,11 @@
 /**
  * @NApiVersion 2.1
  */
-define([],
+/*1.0       shobiya     april 21 2022       /BA-89159 component swap
+ */
+define(['N/search','N/record','N/url','N/render','N/format'],
     
-    () => {
+    (search,record,url,render,format) => {
 
         const create_salesorderSearchObj = (fil) => {
             return search.create({
@@ -117,7 +119,7 @@ define([],
                 id: soId,
                 values: {
                     'custbody_ordertype': '4',
-                    'custbody_resend_order': 'T'
+                    'custbody_resend_order': true
                 }
             })
         }
@@ -185,67 +187,6 @@ define([],
             customRecord.save();
         }
 
-        const sendEmail = (soId, sku_details, parentID) => {
-            //store custom record, get id
-            //create custom record, get id from here.
-            //check for similar and disc
-            let _type = (sku_details[Object.keys(sku_details)[0]]['_type']);
-            let templateId = _type == XML_TYPE.SIMILAR ? EMAIL_TEMPLATE.SIMILAR : EMAIL_TEMPLATE.DISSIMILAR
-
-            var EmailMergeResult = render.mergeEmail({
-                templateId: templateId,
-
-                transactionId: parseInt(soId)
-
-            });
-
-            var subject = EmailMergeResult.subject;
-            var body = EmailMergeResult.body;
-            body = constructBody(body, sku_details, _type);
-            // throw JSON.stringify(sku_details);
-
-            // customer_options(resp_id,sku_details)
-            //body=
-            let to_email = '';
-            let _cc = [];
-            log.debug('type', _type);
-            if (_type == 1) {
-                let disti_email = (sku_details[Object.keys(sku_details)[0]]['distributor_email']);
-                let cm_email = (sku_details[Object.keys(sku_details)[0]]['cm_email']);
-                let unique_key = (sku_details[Object.keys(sku_details)[0]]['uniquenumber']);
-
-                _cc.push('fulfillment@nutanix.com');
-                body = libCS.create_rej_link(unique_key, body)
-                //throw body;
-                if (cm_email) _cc.push(cm_email);
-                //  log.debug('cc', _cc.toString());
-                //  if (!disti_email) disti_email = cm_email;
-                to_email = disti_email;
-            } else {
-                let cm_email = (sku_details[Object.keys(sku_details)[0]]['cm_email']);
-                to_email = (sku_details[Object.keys(sku_details)[0]]['salesrep_email']);
-                if (cm_email) _cc.push(cm_email);
-            }
-            log.debug('to_eamil', to_email);
-            if (to_email) {
-                libCS.TriggerHoldSignalFromSO(soId);
-                email.send({
-                    author: SENDER,
-                    recipients: to_email,
-                    cc: _cc,
-                    subject: subject,
-                    body: body,
-
-                    relatedRecords: {
-                        transactionId: soId
-                    }
-                });
-
-                log.debug('email sent')
-            }
-            //send email
-        }
-
         const getFilters = (arr_from_sku, __model) => {
             var searchFilters = [];
             /* searchFilters.push(["internalidnumber", "equalto", "18668146"]);
@@ -267,7 +208,7 @@ define([],
             } else {
                 arr_from_sku.forEach(function(item_name) {
 
-                    _filters.push(['item.name', 'is', item_name]);
+                    _filters.push(['item.name', 'is', item_name]);//
                     _filters.push('OR');
                 });
             }

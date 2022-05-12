@@ -3,6 +3,10 @@
  * @NScriptType Suitelet
  * @NModuleScope Public
  */
+
+/*1.0       shobiya     april 21 2022       /BA-89159 component swap
+ */
+
 define(['SuiteScripts/NTX/NTX_Lib_Swap.js','N/search','N/record','N/ui/serverWidget','N/format'],
     
     (libCS,search,record,ui,format) => {
@@ -265,7 +269,7 @@ log.debug(selected_id);
                                 type: 'customrecord_ntx_cs_user_response',
                                 id: selected_id,
                                 values: {
-                                    'custrecord_ntx_cs_selected_by_user': 'T'
+                                    'custrecord_ntx_cs_selected_by_user': true
                                 }
                             });
                         }

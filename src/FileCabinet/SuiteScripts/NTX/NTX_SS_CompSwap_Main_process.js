@@ -3,6 +3,9 @@
  * @NScriptType ScheduledScript
  */
 
+/*1.0       shobiya     april 21 2022       /BA-89159 component swap
+ */
+
 define(['N/search', 'N/record','N/error','N/runtime'],
 
     (search, record,error,runtime) => {
@@ -36,7 +39,7 @@ define(['N/search', 'N/record','N/error','N/runtime'],
                     line: 0,
                 });
 
-                poRec.setSublistValue({
+                    poRec.setSublistValue({
                     sublistId: 'item',
                     fieldId: 'item',
                     value: DUMMY_ITEM,
@@ -57,11 +60,15 @@ define(['N/search', 'N/record','N/error','N/runtime'],
         }
 
         const swapInSO = (soId, jsonData, lineID, xml_type) => {
+            log.debug('swapping proces');
             let actual_LineId = parseInt(lineID) + 1;
+        //    actual_LineId=5;
+            log.debug('actua_lineid,soid',actual_LineId +"::"+soId);
             let soRec = record.load({
                 type: 'salesorder',
                 id: soId
             });
+
             let vendorId = soRec.getValue('custbody_send_xml_to');
             /*
             * from_sku = {string} C-NIC-25GSFP2-A12
@@ -136,16 +143,17 @@ model = {string} NX-8155-G7-4214*/
                 });
             }
             log.debug('setting hold signal');
-            soRec.setValue({
+         soRec.setValue({
                 fieldId: 'custbody_ordertype',
                 value: 2
             });
             soRec.setValue({
                 fieldId: 'custbody_resend_order',
-                value: 'T'
+                value: true
             });
 
             soRec.save();
+            log.debug('createpo');
             //create po
             create_spl_ord_po(soId, vendorId);
 
@@ -154,7 +162,7 @@ model = {string} NX-8155-G7-4214*/
         }
         const create_spl_ord_po = (salesOrderId, vendorId) => {
 
-
+log.debug('test');
             var entityId = search.lookupFields({
                 type: 'salesorder',
                 id: salesOrderId,
@@ -202,7 +210,7 @@ model = {string} NX-8155-G7-4214*/
             */
         }
         const execute = (scriptContext) => {
-
+log.debug('start process');
             var searchResult = search.load({
                 id: searchId
             }).run();
@@ -245,7 +253,7 @@ log.debug('done');
                     });
                 }
                 catch(e){
-throw e;
+
                       var  err = 'System error: ' + e.name + '\n' + e.message +""+e.stack;
 
                     log.error('err',err);
