@@ -294,7 +294,7 @@ log.debug(selected_id);
                 });
 
 
-                context.response.write('Thankyou for your response, its recorded in the system');
+                context.response.write(isApproved!='T'? 'Thankyou for your response, its recorded in the system':'Thank you for your confirmation. Once the Order has been updated an Order Confirmation will be sent confirming the details');
 
 
 

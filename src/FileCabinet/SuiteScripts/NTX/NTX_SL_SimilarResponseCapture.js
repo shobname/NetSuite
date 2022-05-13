@@ -76,7 +76,7 @@ const updateCustomerResponse=(resp,uniqueKey)=>{
             var uniqueNum = request.parameters.lineId;
 
             let successful = updateCustomerResponse(resp,uniqueNum);
-            let msg = successful?'Thankyou for your response, its recorded in the system.':'Response not recorded, this order is already swapped.please contact fulfillment@nutanix.com';
+            let msg = successful?'Thank you for your confirmation. Once the Order has been updated an Order Confirmation will be sent confirming the details':'Response not recorded, this order is already swapped.please contact fulfillment@nutanix.com';
 
             context.response.write(msg);
 

@@ -5,85 +5,101 @@
 
 /*1.0       shobiya     april 21 2022       /BA-89159 component swap
  */
+define(['N/task','N/search', 'N/record', 'N/error', 'N/runtime'],
 
-define(['N/search', 'N/record','N/error','N/runtime'],
-
-    (search, record,error,runtime) => {
+    (task,search, record, error, runtime) => {
         let script = runtime.getCurrentScript();
-        const searchId = script.getParameter('custscript_ntx_ss_compswap_process');
-        const DUMMY_ITEM = script.getParameter('custscript_ntx_ss_compswap_po_item');
 
-      //  const searchId = 20115;
-      //  const DUMMY_ITEM = 123717;
+        const RemoveLines_ClosePO = (soId) => {
 
-        const RemoveLines_ClosePO = (po_id) => {
+            const DUMMY_ITEM = script.getParameter('custscript_ntx_ss_compswap_po_item');
 
-                var poRec = record.load({
-                    type: 'purchaseorder',
-                    id: po_id
-                });
-                var lineCount = poRec.getLineCount({
-                    sublistId: 'item'
-                });
-               for (let i = lineCount -1; i >= 0; i--) {
-
-                    poRec.removeLine({
-                        sublistId: 'item',
-                        line: i
-                    });
-                }
-
-
-                poRec.insertLine({
-                    sublistId: 'item',
-                    line: 0,
-                });
-
-                    poRec.setSublistValue({
-                    sublistId: 'item',
-                    fieldId: 'item',
-                    value: DUMMY_ITEM,
-                    line: 0
-                });
-
-                poRec.setSublistValue({
-                    sublistId: 'item',
-                    fieldId: 'isclosed',
-                    line: 0,
-                    value: true
-                });
-
-
-                poRec.save();
-                return true;
-
-        }
-
-        const swapInSO = (soId, jsonData, lineID, xml_type) => {
-            log.debug('swapping proces');
-            let actual_LineId = parseInt(lineID) + 1;
-        //    actual_LineId=5;
-            log.debug('actua_lineid,soid',actual_LineId +"::"+soId);
-            let soRec = record.load({
+            let so = record.load({
                 type: 'salesorder',
                 id: soId
             });
+            var lineCount = so.getLineCount({
+                sublistId: 'links'
+            });
 
-            let vendorId = soRec.getValue('custbody_send_xml_to');
-            /*
-            * from_sku = {string} C-NIC-25GSFP2-A12
-to_sku = {string} C-NIC-25G2B1
-from_quan = {number} 4
-to_quan = {number} 4
-sf_req_id = {string} a340e000000G9ilAAC
-sf_order_line_id = {string} a340e000000G9iqAAC
-model = {string} NX-8155-G7-4214*/
+            for (var q = 0; q < lineCount; q++) {
+
+
+                var _type = so.getSublistValue({
+                    sublistId: 'links',
+                    fieldId: "type",
+                    line: q
+                });
+                var linktype = so.getSublistValue({
+                    sublistId: 'links',
+                    fieldId: "linktype",
+                    line: q
+                });
+                if (_type == 'Purchase Order' && linktype == 'Special Order') {
+                    var po_id = so.getSublistValue({
+                        sublistId: 'links',
+                        fieldId: "id",
+                        line: q
+                    });
+                    var poRec = record.load({
+                        type: 'purchaseorder',
+                        id: po_id
+                    });
+                    var lineCount = poRec.getLineCount({
+                        sublistId: 'item'
+                    });
+                    for (let i = lineCount - 1; i >= 0; i--) {
+
+                        poRec.removeLine({
+                            sublistId: 'item',
+                            line: i
+                        });
+                    }
+
+
+                    poRec.insertLine({
+                        sublistId: 'item',
+                        line: 0,
+                    });
+
+                    poRec.setSublistValue({
+                        sublistId: 'item',
+                        fieldId: 'item',
+                        value: DUMMY_ITEM,
+                        line: 0
+                    });
+
+                    poRec.setSublistValue({
+                        sublistId: 'item',
+                        fieldId: 'isclosed',
+                        line: 0,
+                        value: true
+                    });
+
+
+                    let poId = poRec.save();
+                    log.debug('po id', poId)
+
+                }
+
+                return true;
+
+            }
+        }
+
+        const swapInSO = (soId, jsonData, lineID, xml_type) => {
+
+            let actual_LineId = parseInt(lineID) - 1;
+
+            log.debug('swapping proces', actual_LineId + "::" + soId);
+
+
             let parseData = JSON.parse(jsonData);
             let to_sku = parseData['to_sku'];
             let to_quan = parseData['to_quan'];
             let po_id = parseData['po_id'];
             let model = parseData['model'];
-            let delinked_po = RemoveLines_ClosePO(po_id);
+            let delinked_po = RemoveLines_ClosePO(soId);
 
             let _values = {
                 "amount": '',
@@ -96,8 +112,17 @@ model = {string} NX-8155-G7-4214*/
                 "custcol_ntnx_arm_rr_end_date": '',
                 "quantity": '',
                 "custcol_term_days": '',
-                "custcol_term_months": ''
+                "custcol_term_months": '',
+                "custcol_ntx_line_code": ""
             }
+
+            let soRec = record.load({
+                type: 'salesorder',
+                id: soId
+            });
+
+            let vendorId = soRec.getValue('custbody_send_xml_to');
+
             for (const property in _values) {
                 _values[property] = soRec.getSublistValue({
                     sublistId: 'item',
@@ -120,7 +145,7 @@ model = {string} NX-8155-G7-4214*/
                 line: actual_LineId
             });
             let toSkuId = getToSku(to_sku);
-            log.debug('itemid',toSkuId);
+            log.debug('itemid', toSkuId);
             soRec.insertLine({
                 sublistId: 'item',
                 line: actual_LineId,
@@ -134,7 +159,7 @@ model = {string} NX-8155-G7-4214*/
             });
 
             for (var property in _values) {
-                log.debug('property',property)
+                log.debug('property', property)
                 soRec.setSublistValue({
                     sublistId: 'item',
                     fieldId: property,
@@ -142,8 +167,8 @@ model = {string} NX-8155-G7-4214*/
                     line: actual_LineId
                 });
             }
-            log.debug('setting hold signal');
-         soRec.setValue({
+            log.debug('setting hold signal', soId);
+            soRec.setValue({
                 fieldId: 'custbody_ordertype',
                 value: 2
             });
@@ -162,7 +187,7 @@ model = {string} NX-8155-G7-4214*/
         }
         const create_spl_ord_po = (salesOrderId, vendorId) => {
 
-log.debug('test');
+            log.debug('test');
             var entityId = search.lookupFields({
                 type: 'salesorder',
                 id: salesOrderId,
@@ -190,7 +215,7 @@ log.debug('test');
             });
         }
         const getToSku = (toSku) => {
-            log.debug('tosku search',toSku);
+            log.debug('tosku search', toSku);
             var itemSearchObj = search.create({
                 type: "item",
                 filters: [
@@ -199,9 +224,9 @@ log.debug('test');
 
 
             });
-            var resultSet = itemSearchObj.run().getRange(0,1);
-            if(resultSet && resultSet.length >0)
-            return (resultSet[0].id)
+            var resultSet = itemSearchObj.run().getRange(0, 1);
+            if (resultSet && resultSet.length > 0)
+                return (resultSet[0].id)
 
             /*
             itemSearchObj.id="customsearch1651674463105";
@@ -210,12 +235,17 @@ log.debug('test');
             */
         }
         const execute = (scriptContext) => {
-log.debug('start process');
+            log.debug('start process');
+            const searchId = script.getParameter('custscript_ntx_ss_compswap_process');
+            var MINIMUM_USAGE = 500;
+            var scriptObj = runtime.getCurrentScript();
+
             var searchResult = search.load({
                 id: searchId
             }).run();
             searchResult.each(function(result) {
                 try {
+                    if (scriptObj.getRemainingUsage() > MINIMUM_USAGE) {
                     var soId = result.getValue({
                         name: "custrecord_ntx_cs_lst_salesorder",
                         join: "CUSTRECORD_NTX_CS_LST_PARENT_SO"
@@ -242,27 +272,43 @@ log.debug('start process');
 
 
                     swapInSO(soId, jsonData, lineID, xmlType);
-log.debug('done');
+                    log.debug('done');
                     record.submitFields({
-                        type:'customrecord_ntx_cs_user_response_parent',
-                        id:parentID,
-                        values:{'custrecord_ntx_cs_error_log': '',
-                            'custrecord_ntx_cs_lst_current_status':4
+                        type: 'customrecord_ntx_cs_user_response_parent',
+                        id: parentID,
+                        values: {
+                            'custrecord_ntx_cs_error_log': '',
+                            'custrecord_ntx_cs_lst_current_status': 4
                         }
 
                     });
                 }
-                catch(e){
+                else{
+                        var scheduledScript = task.create({
+                            taskType: task.TaskType.SCHEDULED_SCRIPT
+                        });
+                        scheduledScript.scriptId = scriptObj.id;
+                        scheduledScript.deploymentId = scriptObj.deploymentId;
 
-                      var  err = 'System error: ' + e.name + '\n' + e.message +""+e.stack;
+// Submit the scheduled task
+                        var schTaskId = scheduledScript.submit();
 
-                    log.error('err',err);
-                 //    log.error(e.name, e.message);
+                        if (schTaskId)
+                            log.debug('Script is successfully rescheduled');
+
+                }
+                } catch (e) {
+
+                    var err = 'System error: ' + e.name + '\n' + e.message + "" + e.stack;
+
+                    log.error('err', err);
+                    //    log.error(e.name, e.message);
                     record.submitFields({
-                        type:'customrecord_ntx_cs_user_response_parent',
-                        id:parentID,
-                        values:{'custrecord_ntx_cs_error_log': err,
-                        'custrecord_ntx_cs_lst_current_status':5
+                        type: 'customrecord_ntx_cs_user_response_parent',
+                        id: parentID,
+                        values: {
+                            'custrecord_ntx_cs_error_log': err,
+                            'custrecord_ntx_cs_lst_current_status': 5
                         }
 
                     });
