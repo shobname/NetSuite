@@ -3,15 +3,15 @@
  */
 /*1.0       shobiya     april 21 2022       /BA-89159 component swap
  */
-define(['N/search','N/record','N/url','N/render','N/format'],
+define(['N/search', 'N/record', 'N/url', 'N/render', 'N/format'],
 
-    (search,record,url,render,format) => {
+    (search, record, url, render, format) => {
 
         const create_salesorderSearchObj = (fil) => {
             return search.create({
                 type: "salesorder",
                 //  id:so_list,
-                // title: 'testing' + new Date(),
+                 title: 'testing shobiya' + new Date(),
                 filters: fil,
                 columns: [
                     search.createColumn({
@@ -87,7 +87,7 @@ define(['N/search','N/record','N/url','N/render','N/format'],
             }
             return parseInt(obj[propertyName]['currentkey']) + 1;
         }
-        const constructTable=(_mainbody)=>{
+        const constructTable = (_mainbody) => {
             _mainbody += '<style>\n' +
                 '.borderclass {\n' +
                 '  border: 1px solid black;\n' +
@@ -187,9 +187,9 @@ define(['N/search','N/record','N/url','N/render','N/format'],
             customRecord.save();
         }
 
-        const getFilters = (arr_from_sku, __model,so_id) => {
+        const getFilters = (arr_from_sku, __model, so_id) => {
             var searchFilters = [];
-            if(so_id) {
+            if (so_id) {
                 searchFilters.push(["internalidnumber", "equalto", so_id]);
                 searchFilters.push('AND');
             }
@@ -202,14 +202,14 @@ define(['N/search','N/record','N/url','N/render','N/format'],
 
             let _filters = [];
             if (__model == true) {
-                arr_from_sku.forEach(function(item_name) {
+                arr_from_sku.forEach(function (item_name) {
 
                     _filters.push(['item.name', 'startswith', item_name]);
                     _filters.push('OR');
                 });
             } else {
-                arr_from_sku.forEach(function(item_name) {
-
+                arr_from_sku.forEach(function (item_name) {
+log.debug('itemname',item_name)
                     _filters.push(['item.name', 'is', item_name]);//
                     _filters.push('OR');
                 });
@@ -221,6 +221,14 @@ define(['N/search','N/record','N/url','N/render','N/format'],
             return searchFilters;
 
         }
-        return {getFilters,constructTable, getProperty,TriggerHoldSignalFromSO,create_rej_link,create_salesorderSearchObj,createChildRecords_for_similar}
+        return {
+            getFilters,
+            constructTable,
+            getProperty,
+            TriggerHoldSignalFromSO,
+            create_rej_link,
+            create_salesorderSearchObj,
+            createChildRecords_for_similar
+        }
 
     });

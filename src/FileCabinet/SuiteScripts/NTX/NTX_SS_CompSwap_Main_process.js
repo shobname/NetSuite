@@ -5,15 +5,15 @@
 
 /*1.0       shobiya     april 21 2022       /BA-89159 component swap
  */
-define(['N/task','N/search', 'N/record', 'N/error', 'N/runtime'],
+define(['N/task', 'N/search', 'N/record', 'N/error', 'N/runtime'],
 
-    (task,search, record, error, runtime) => {
+    (task, search, record, error, runtime) => {
         let script = runtime.getCurrentScript();
 
         const RemoveLines_ClosePO = (soId) => {
 
             const DUMMY_ITEM = script.getParameter('custscript_ntx_ss_compswap_po_item');
-
+log.debug('soid',soId);
             let so = record.load({
                 type: 'salesorder',
                 id: soId
@@ -35,6 +35,7 @@ define(['N/task','N/search', 'N/record', 'N/error', 'N/runtime'],
                     fieldId: "linktype",
                     line: q
                 });
+                log.debug('po details', _type +":::"+ linktype);
                 if (_type == 'Purchase Order' && linktype == 'Special Order') {
                     var po_id = so.getSublistValue({
                         sublistId: 'links',
@@ -45,10 +46,11 @@ define(['N/task','N/search', 'N/record', 'N/error', 'N/runtime'],
                         type: 'purchaseorder',
                         id: po_id
                     });
-                    var lineCount = poRec.getLineCount({
+
+                    var _lineCount = poRec.getLineCount({
                         sublistId: 'item'
                     });
-                    for (let i = lineCount - 1; i >= 0; i--) {
+                    for (let i = _lineCount - 1; i >= 0; i--) {
 
                         poRec.removeLine({
                             sublistId: 'item',
@@ -82,7 +84,7 @@ define(['N/task','N/search', 'N/record', 'N/error', 'N/runtime'],
 
                 }
 
-                return true;
+
 
             }
         }
@@ -131,7 +133,6 @@ define(['N/task','N/search', 'N/record', 'N/error', 'N/runtime'],
                 });
             }
             let existingLineQuan = _values['quantity'];
-
 
 
             if (existingLineQuan != to_quan) {
@@ -243,47 +244,46 @@ define(['N/task','N/search', 'N/record', 'N/error', 'N/runtime'],
             var searchResult = search.load({
                 id: searchId
             }).run();
-            searchResult.each(function(result) {
+            searchResult.each(function (result) {
                 try {
                     if (scriptObj.getRemainingUsage() > MINIMUM_USAGE) {
-                    var soId = result.getValue({
-                        name: "custrecord_ntx_cs_lst_salesorder",
-                        join: "CUSTRECORD_NTX_CS_LST_PARENT_SO"
-                    });
-                    var uniqueKey = result.getValue({
-                        name: "custrecord_ntx_cs_lst_uniquekey",
-                        join: "CUSTRECORD_NTX_CS_LST_PARENT_SO"
-                    });
-                    var xmlType = result.getValue({
-                        name: "custrecord_ntx_cs_xml_type",
-                        join: "CUSTRECORD_NTX_CS_LST_PARENT_SO"
-                    });
-                    var jsonData = result.getValue({
-                        name: "custrecord_ntx_cs_option_json"
-                    });
-                    var lineID = result.getValue({
-                        name: "custrecord_ntx_cs_so_line_id"
-                    });
-                    var parentID = result.getValue({
-                        name: "custrecord_ntx_cs_lst_parent_so",
-                        sort: search.Sort.DESC,
-                        label: "component swap salesorders"
-                    });
+                        var soId = result.getValue({
+                            name: "custrecord_ntx_cs_lst_salesorder",
+                            join: "CUSTRECORD_NTX_CS_LST_PARENT_SO"
+                        });
+                        var uniqueKey = result.getValue({
+                            name: "custrecord_ntx_cs_lst_uniquekey",
+                            join: "CUSTRECORD_NTX_CS_LST_PARENT_SO"
+                        });
+                        var xmlType = result.getValue({
+                            name: "custrecord_ntx_cs_xml_type",
+                            join: "CUSTRECORD_NTX_CS_LST_PARENT_SO"
+                        });
+                        var jsonData = result.getValue({
+                            name: "custrecord_ntx_cs_option_json"
+                        });
+                        var lineID = result.getValue({
+                            name: "custrecord_ntx_cs_so_line_id"
+                        });
+                        var parentID = result.getValue({
+                            name: "custrecord_ntx_cs_lst_parent_so",
+                            sort: search.Sort.DESC,
+                            label: "component swap salesorders"
+                        });
 
 
-                    swapInSO(soId, jsonData, lineID, xmlType);
-                    log.debug('done');
-                    record.submitFields({
-                        type: 'customrecord_ntx_cs_user_response_parent',
-                        id: parentID,
-                        values: {
-                            'custrecord_ntx_cs_error_log': '',
-                            'custrecord_ntx_cs_lst_current_status': 4
-                        }
+                        swapInSO(soId, jsonData, lineID, xmlType);
+                        log.debug('done');
+                        record.submitFields({
+                            type: 'customrecord_ntx_cs_user_response_parent',
+                            id: parentID,
+                            values: {
+                                'custrecord_ntx_cs_error_log': '',
+                                'custrecord_ntx_cs_lst_current_status': 4
+                            }
 
-                    });
-                }
-                else{
+                        });
+                    } else {
                         var scheduledScript = task.create({
                             taskType: task.TaskType.SCHEDULED_SCRIPT
                         });
@@ -296,7 +296,7 @@ define(['N/task','N/search', 'N/record', 'N/error', 'N/runtime'],
                         if (schTaskId)
                             log.debug('Script is successfully rescheduled');
 
-                }
+                    }
                 } catch (e) {
 
                     var err = 'System error: ' + e.name + '\n' + e.message + "" + e.stack;

@@ -5,9 +5,9 @@
 /*1.0       shobiya     april 21 2022       /BA-89159 component swap
  */
 
-define(['N/ui/serverWidget','N/task'],
-    
-    (ui,task) => {
+define(['N/ui/serverWidget', 'N/task'],
+
+    (ui, task) => {
 
         const onRequest = (context) => {
             if (context.request.method === 'GET') {
@@ -17,13 +17,12 @@ define(['N/ui/serverWidget','N/task'],
                 });
 
                 form.addSubmitButton({
-                    id:'custpage_btn_startprocess',
-                    label:'Start Sending Email'
+                    id: 'custpage_btn_startprocess',
+                    label: 'Start Sending Email'
                 })
-             //   form.clientScriptFileId = 18125554;
+                //   form.clientScriptFileId = 18125554;
                 context.response.writePage(form);
-            }
-            else{
+            } else {
                 try {
                     let scriptTask = task.create({taskType: task.TaskType.SCHEDULED_SCRIPT});
                     scriptTask.scriptId = 'customscript_ntx_ss_cp_sendemail';
@@ -39,9 +38,8 @@ define(['N/ui/serverWidget','N/task'],
                         context.response.write('Batch is started');
                     }
 
-                }
-                catch(e){
-                    context.response.write('Error'+ e);
+                } catch (e) {
+                    context.response.write('Error' + e);
                 }
             }
 
